@@ -1,4 +1,4 @@
-# LingoLeaf 0.5.0
+# LingoLeaf 0.5.1
 
 İngilizce okurken kelime ve ifadelerini yönet. Türkçe arayüz, yerel kayıt, renklendirme ve seçim kartında Türkçe çeviri.
 

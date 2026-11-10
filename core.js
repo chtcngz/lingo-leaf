@@ -91,6 +91,8 @@
     const seen=new Set();
     return found.sort((a,b)=>a.at-b.at).filter(term=>!seen.has(term.word)&&seen.add(term.word)).map(({at,...term})=>term);
   }
+  // A selection that is one phrase plus the object inside it ("ruling anyone out") stands for that phrase alone.
+  function selectionTerms(text,candidates,saved){const found=extractTerms(text,candidates,saved),phrases=found.filter(term=>term.phrase);return phrases.length===1&&tokens(phrases[0].surface).length===tokens(text).length?phrases:found;}
   function terms(text,candidates,saved,exclude){return extractTerms(text,candidates,saved,exclude).map(term=>term.word);}
   function phraseSuggestions(text,start,end,index,saved={}){
     const matches=phraseMatches(text,index).filter(match=>!Object.hasOwn(saved,match.word)&&match.start<end&&match.end>start)
@@ -110,6 +112,6 @@
   }
   function streak(days,now=new Date()){const active=new Set(days);let d=new Date(now),count=0;if(!active.has(day(d)))d.setDate(d.getDate()-1);while(active.has(day(d))){count++;d.setDate(d.getDate()-1);}return count;}
   function parseCSV(text){const first=text.split(/\r?\n/,1)[0],delimiter=(first.match(/;/g)||[]).length>(first.match(/,/g)||[]).length?';':',';const rows=[];let row=[],field='',quoted=false;for(let i=0;i<text.length;i++){const c=text[i];if(c==='"'){if(quoted&&text[i+1]==='"'){field+='"';i++;}else quoted=!quoted;}else if(!quoted&&(c===delimiter||c==='\n'||c==='\r')){row.push(field);field='';if(c==='\n'||c==='\r'){if(c==='\r'&&text[i+1]==='\n')i++;if(row.some(Boolean))rows.push(row);row=[];}}else field+=c;}if(quoted)throw Error('CSV içinde kapanmamış tırnak var.');row.push(field);if(row.some(Boolean))rows.push(row);return rows;}
-  globalThis.Lingo = {statuses, labels, defaults, normalize, tokens, unique, validKey, settings, day, englishHint, phraseIndex, matchedTokens, candidateIndex, bundledIndex, extractTerms, terms, phraseSuggestions, sentenceContext, streak, parseCSV};
+  globalThis.Lingo = {statuses, labels, defaults, normalize, tokens, unique, validKey, settings, day, englishHint, phraseIndex, matchedTokens, candidateIndex, bundledIndex, extractTerms, selectionTerms, terms, phraseSuggestions, sentenceContext, streak, parseCSV};
   if (typeof module !== 'undefined') module.exports = globalThis.Lingo;
 })();

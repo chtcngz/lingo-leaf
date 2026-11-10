@@ -70,3 +70,9 @@ test('split candidate phrases fall back to words, saved ones stay whole', () => 
   assert.equal(Lingo.extractTerms('look up', index, saved)[0].saved, true);
   assert.equal(Lingo.extractTerms('look up', index)[0].saved, false);
 });
+
+test('a selected separated phrase stands for the phrase alone', () => {
+  assert.deepEqual(Lingo.selectionTerms('ruling anyone out', index).map(t => t.word), ['rule out']);
+  assert.deepEqual(Lingo.selectionTerms('gave it up', index).map(t => t.word), ['give up']);
+  assert.deepEqual(Lingo.selectionTerms('gave it up quickly', index).map(t => t.word), ['give up', 'it', 'quickly']);
+});

@@ -58,8 +58,10 @@
     if(/[ğışİĞŞ]/.test(text))return false;
     if(text.length<55)return pageEnglish||Lingo.englishHint(text);
     if(languageCache.has(text))return languageCache.get(text);
+    // Headlines are full of names and short of function words, so an uncertain verdict follows the page language.
+    const fallback=()=>pageEnglish||Lingo.englishHint(text);
     let english=false;
-    try{const r=await message({type:'detect',text});const first=r.languages?.[0];english=r.isReliable&&first?.language==='en'&&first.percentage>=65;if(!r.isReliable)english=Lingo.englishHint(text);}catch{english=Lingo.englishHint(text);}
+    try{const r=await message({type:'detect',text});const first=r.languages?.[0];english=r.isReliable&&first?.percentage>=65?first.language==='en':fallback();}catch{english=fallback();}
     if(languageCache.size>=300)languageCache.delete(languageCache.keys().next().value);languageCache.set(text,english);return english;
   }
   function schedule() { clearTimeout(timer); generation++; timer=setTimeout(scan,350); }
@@ -113,7 +115,7 @@
   }
   async function identify() {
     const declared=document.documentElement.lang.toLowerCase();const sample=document.body.innerText.slice(0,6000);
-    pageEnglish=declared==='en'||declared.startsWith('en-');
+    pageEnglish=declared==='en'||declared.startsWith('en-');languageCache.clear();
     if (!declared) {try {const r=await message({type:'detect',text:sample});pageEnglish=r.isReliable&&r.languages?.[0]?.language==='en'&&r.languages[0].percentage>=65;}catch{pageEnglish=Lingo.englishHint(sample);}}
     schedule();
   }
@@ -165,7 +167,7 @@
     const request=++translationRequest;
     selected=text.slice(0,5000);card.replaceChildren();
     const title=document.createElement('div');title.className='title';title.textContent=selected;card.append(title);
-    const terms=Lingo.extractTerms(selected,candidatePhrases,words),list=terms.map(term=>term.word),single=list.length===1?terms[0]:null;
+    const terms=Lingo.selectionTerms(selected,candidatePhrases,words),list=terms.map(term=>term.word),single=list.length===1?terms[0]:null;
     if(single?.phrase&&single.surface.toLowerCase()!==single.word)title.textContent=`${single.surface} → ${single.word}`;
     const suggestions=details.suggestions.filter(suggestion=>!list.includes(suggestion.word));
     const translation=document.createElement('div');translation.className='translation';

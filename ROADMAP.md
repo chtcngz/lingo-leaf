@@ -1,6 +1,6 @@
 # LingoLeaf — Yol haritası
 
-Güncelleme: 10 Kasım 2026 · Sürüm: 0.5.0
+Güncelleme: 10 Kasım 2026 · Sürüm: 0.5.1
 
 ## Kapsam
 
@@ -67,6 +67,11 @@ Güncelleme: 10 Kasım 2026 · Sürüm: 0.5.0
 - [x] `in spite of`, `as well as` gibi kalıp ifadeler.
 - [x] Paneldeki yanlış öbek adayını kelimelere bölme.
 - [ ] Gerçek Chrome eklentisinde öbek kartı ve panel akışının doğrulanması.
+
+## 0.5.1 düzeltmeler
+
+- [x] Dil algılayıcının emin olmadığı başlıklar sayfa diline göre renklendirilir (özel adlarla dolu haber başlıkları).
+- [x] Arası açık öbeğin tamamı seçildiğinde (`ruling anyone out`) kart onu tek öbek (`rule out`) olarak gösterir.
 
 ## Sonraki çeviri geliştirmeleri
 
