@@ -1,4 +1,5 @@
-importScripts('core.js');
+importScripts('phrases.js','core.js');
+const candidatePhrases=Lingo.candidateIndex(globalThis.LingoPhrases);
 let queue=Promise.resolve();
 const enqueue=fn=>{const result=queue.then(fn);queue=result.catch(()=>{});return result;};
 chrome.sidePanel.setPanelBehavior({openPanelOnActionClick:true}).catch(()=>{});
@@ -8,7 +9,7 @@ chrome.runtime.onInstalled.addListener(()=>chrome.contextMenus.removeAll(()=>{
 async function pending(text,tab){await chrome.storage.local.set({pending:{text:String(text||'').slice(0,5000),url:tab?.url||'',nonce:Date.now()}});}
 chrome.contextMenus.onClicked.addListener((info,tab)=>{
   if(info.menuItemId==='select'){chrome.sidePanel.open({windowId:tab.windowId}).catch(()=>{});pending(info.selectionText,{...tab,url:info.pageUrl||tab?.url}).catch(console.error);}
-  else enqueue(()=>change({words:Lingo.unique(info.selectionText),status:info.menuItemId,url:info.pageUrl||tab?.url,example:info.selectionText})).catch(console.error);
+  else enqueue(async()=>change({words:Lingo.terms(info.selectionText,candidatePhrases,(await chrome.storage.local.get('words')).words||{}),status:info.menuItemId,url:info.pageUrl||tab?.url,example:info.selectionText})).catch(console.error);
 });
 chrome.commands.onCommand.addListener((command,tab)=>{
   if(command!=='open-panel'||!tab)return;

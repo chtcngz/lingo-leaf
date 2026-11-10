@@ -4,6 +4,7 @@
   let words = {}, settings = Lingo.settings(), generation = 0, timer, pageEnglish = false, pageStats = null;
   const blockSelector='p,li,blockquote,h1,h2,h3,h4,h5,h6,td,th,figcaption,div,article,section';
   const blockVerdicts=new WeakMap(),languageCache=new Map();let lastInteraction=Date.now();
+  const candidatePhrases=Lingo.candidateIndex(globalThis.LingoPhrases||[]);
   const names = new Set(); const sheet = new CSSStyleSheet();
   document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet];
   const excluded = 'script,style,noscript,textarea,input,select,option,code,pre,svg,math,[contenteditable]:not([contenteditable="false"]),[translate="no"],[data-lingoleaf],button';
@@ -32,11 +33,22 @@
   function allowed(el) {
     if (el.closest(excluded)) return false;
     if (settings.siteModes[location.hostname] === 'on') return true;
-    const block=textBlock(el);
-    if(blockVerdicts.has(block))return blockVerdicts.get(block);
     const lang = el.closest('[lang]')?.getAttribute('lang')?.toLowerCase();
     if (lang) return lang === 'en' || lang.startsWith('en-');
+    const block=textBlock(el);
+    if(blockVerdicts.has(block))return blockVerdicts.get(block);
     return pageEnglish;
+  }
+  function selectionDetails(selection,el){
+    try{
+      const block=textBlock(el),range=selection.getRangeAt(0);
+      if(!block.contains(range.startContainer)||!block.contains(range.endContainer))return {sentence:'',suggestions:[]};
+      const before=document.createRange();before.selectNodeContents(block);before.setEnd(range.startContainer,range.startOffset);
+      const after=document.createRange();after.selectNodeContents(block);after.setStart(range.endContainer,range.endOffset);
+      const prefix=before.toString().slice(-900),chosen=range.toString(),context=prefix+chosen+after.toString().slice(0,900);
+      const start=prefix.length,end=start+chosen.length;
+      return {sentence:Lingo.sentenceContext(context,start),suggestions:Lingo.phraseSuggestions(context,start,end,candidatePhrases,words)};
+    }catch{return {sentence:'',suggestions:[]};}
   }
   async function detectBlock(block){
     if(settings.siteModes[location.hostname]==='on')return true;
@@ -108,9 +120,10 @@
   const host=document.createElement('div');host.dataset.lingoleaf='true';
   host.style.cssText='all:initial;position:fixed;z-index:2147483647;display:none;';
   const shadow=host.attachShadow({mode:'closed'});
-  const style=document.createElement('style');style.textContent=`:host{font:13px system-ui;color:#1c3430} .card{box-sizing:border-box;width:min(360px,calc(100vw - 16px));max-height:calc(100vh - 16px);overflow-y:auto;background:#fff;border:1px solid #d5e4dc;border-radius:14px;box-shadow:0 10px 40px #0003;padding:10px} .title{font-size:12px;color:#63776c;padding:3px 4px 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis} .translation{border-top:1px solid #e4eee8;margin:2px 0 10px;padding:10px 4px 2px} .translation-label{font-size:10px;font-weight:700;letter-spacing:.5px;color:#63776c;margin-bottom:5px} .translation-text{font-size:14px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere} .actions{display:flex;gap:5px;flex-wrap:wrap}button{font:12px system-ui;cursor:pointer;border:0;border-radius:8px;background:#edf4ef;color:#193d30;padding:8px}button:hover{background:#d4e8dc} .note{padding:6px;font-size:12px}`;
+  const style=document.createElement('style');style.textContent=`.card{box-sizing:border-box;width:min(360px,calc(100vw - 16px));max-height:calc(100vh - 16px);overflow-y:auto;background:#fff;border:1px solid #d5e4dc;border-radius:14px;box-shadow:0 10px 40px #0003;padding:10px;font:13px/1.45 system-ui;color:#1c3430} .title{font-size:12px;color:#63776c;padding:3px 4px 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis} .translation{border-top:1px solid #e4eee8;margin:2px 0 10px;padding:10px 4px 2px} .translation-label{font-size:10px;font-weight:700;letter-spacing:.5px;color:#63776c;margin-bottom:5px} .translation-text{font-size:14px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere} .context-source{color:#63776c;font-size:11px;margin-bottom:5px} .phrase-row{padding:6px 0;border-bottom:1px solid #edf3ef} .phrase-row:last-child{border:0} .phrase-form{font-weight:650} .phrase-meaning{font-size:12px;margin:4px 0;color:#496b58} .actions{display:flex;gap:5px;flex-wrap:wrap}button{font:12px system-ui;cursor:pointer;border:0;border-radius:8px;background:#edf4ef;color:#193d30;padding:8px}button:hover{background:#d4e8dc}button:disabled{opacity:.6;cursor:default} .note{padding:6px;font-size:12px}`;
   shadow.append(style);const card=document.createElement('div');card.className='card';shadow.append(card);document.documentElement.append(host);
   let selected='',translationRequest=0,translatorPromise=null,translatorState=null;
+  const translationCache=new Map();
   function hide(){translationRequest++;host.style.display='none';}
   function positionCard(rect){
     const width=card.getBoundingClientRect().width,height=card.getBoundingClientRect().height;
@@ -118,13 +131,15 @@
     const below=rect.bottom+10,above=rect.top-height-10;
     host.style.top=`${below+height<=innerHeight-8?below:above>=8?above:Math.max(8,innerHeight-height-8)}px`;
   }
-  async function translateSelection(text,request,output,rect){
+  async function translateSelection(text,request,output,rect,onDone){
     const update=value=>{if(request!==translationRequest)return;output.textContent=value;positionCard(rect);};
+    const finish=result=>{update(result);if(request===translationRequest)onDone?.(result);};
     try{
-      if(!globalThis.Translator){update('Yerel çeviri için Chrome 138 veya üzeri gerekir.');return;}
+      if(translationCache.has(text)){finish(translationCache.get(text));return;}
+      if(!globalThis.Translator){finish('Yerel çeviri için Chrome 138 veya üzeri gerekir.');return;}
       if(!translatorPromise){
         const state=translatorState??await Translator.availability({sourceLanguage:'en',targetLanguage:'tr'});
-        if(state==='unavailable'){update('İngilizce–Türkçe çeviri bu tarayıcıda kullanılamıyor.');return;}
+        if(state==='unavailable'){finish('İngilizce–Türkçe çeviri bu tarayıcıda kullanılamıyor.');return;}
         if(request!==translationRequest)return;
         translatorState=state;
         if(state!=='available')update('Çeviri dil paketi hazırlanıyor…');
@@ -136,37 +151,72 @@
       if(request!==translationRequest)return;
       update('Çevriliyor…');
       const result=await translator.translate(text);
-      update(result);
+      translationCache.set(text,result);if(translationCache.size>100)translationCache.delete(translationCache.keys().next().value);
+      finish(result);
     }catch{
-      translatorPromise=null;
       if(request!==translationRequest)return;
+      translatorPromise=null;
       output.replaceChildren(document.createTextNode('Çeviri tamamlanamadı. '));
-      const retry=document.createElement('button');retry.textContent='Tekrar dene';retry.onclick=()=>{update('Çevriliyor…');translateSelection(text,request,output,rect);};output.append(retry);positionCard(rect);
+      const retry=document.createElement('button');retry.textContent='Tekrar dene';retry.onclick=()=>{update('Çevriliyor…');translateSelection(text,request,output,rect,onDone);};output.append(retry);positionCard(rect);
+      onDone?.(null);
     }
   }
-  function show(text, rect) {
+  function show(text, rect, details) {
     const request=++translationRequest;
     selected=text.slice(0,5000);card.replaceChildren();
     const title=document.createElement('div');title.className='title';title.textContent=selected;card.append(title);
+    const terms=Lingo.extractTerms(selected,candidatePhrases,words),list=terms.map(term=>term.word),single=list.length===1?terms[0]:null;
+    if(single?.phrase&&single.surface.toLowerCase()!==single.word)title.textContent=`${single.surface} → ${single.word}`;
+    const suggestions=details.suggestions.filter(suggestion=>!list.includes(suggestion.word));
     const translation=document.createElement('div');translation.className='translation';
     const translationLabel=document.createElement('div');translationLabel.className='translation-label';translationLabel.textContent='TÜRKÇE ÇEVİRİ';translation.append(translationLabel);
     const translationText=document.createElement('div');translationText.className='translation-text';translationText.setAttribute('aria-live','polite');translationText.textContent='Çevriliyor…';translation.append(translationText);card.append(translation);
+    const phraseOutputs=[];
+    if(suggestions.length){
+      const section=document.createElement('div');section.className='translation';
+      const label=document.createElement('div');label.className='translation-label';label.textContent='ÖBEK ÖNERİSİ';section.append(label);
+      for(const suggestion of suggestions.slice(0,2)){
+        const row=document.createElement('div');row.className='phrase-row';
+        const form=document.createElement('div');form.className='phrase-form';form.textContent=suggestion.surface===suggestion.word?suggestion.word:`${suggestion.surface} → ${suggestion.word}`;row.append(form);
+        const meaning=document.createElement('div');meaning.className='phrase-meaning';meaning.setAttribute('aria-live','polite');meaning.textContent='Çevriliyor…';row.append(meaning);
+        const save=document.createElement('button');save.textContent='Öğreniyorum olarak ekle';save.onclick=async()=>{
+          try{save.disabled=true;const result=await message({type:'change',words:[suggestion.word],status:'learning',example:details.sentence||selected});save.textContent=result.count?'Eklendi':'Zaten kayıtlı';}
+          catch(e){save.disabled=false;meaning.textContent=e.message;}
+        };row.append(save);section.append(row);phraseOutputs.push({text:suggestion.surface,output:meaning});
+      }
+      card.append(section);
+    }
+    let contextOutput=null;
+    if(Lingo.tokens(selected).length===1&&details.sentence&&details.sentence.toLowerCase()!==selected.toLowerCase()){
+      const section=document.createElement('div');section.className='translation';
+      const label=document.createElement('div');label.className='translation-label';label.textContent='CÜMLEDEKİ KULLANIM';section.append(label);
+      const source=document.createElement('div');source.className='context-source';source.textContent=details.sentence;section.append(source);
+      contextOutput=document.createElement('div');contextOutput.className='translation-text';contextOutput.setAttribute('aria-live','polite');contextOutput.textContent='Çevriliyor…';section.append(contextOutput);card.append(section);
+    }
+    if(suggestions.length&&single&&!single.phrase){const only=document.createElement('div');only.className='note';only.textContent=`Yalnızca “${single.word}”:`;card.append(only);}
     const actions=document.createElement('div');actions.className='actions';card.append(actions);
     const add=(label,fn)=>{const b=document.createElement('button');b.textContent=label;b.onclick=()=>fn().catch(e=>{title.textContent=e.message;});actions.append(b);};
     add('Kelimeleri yönet',async()=>{await message({type:'pending',text:selected,url:location.href});hide();});
-    const list=Lingo.unique(selected);
     if(list.length===1)for(const status of Lingo.statuses)add(Lingo.labels[status],async()=>{
-      const word=list[0];
-      const result=await message({type:'change',words:[word],status,example:getSelection()?.anchorNode?.parentElement?.closest(blockSelector)?.textContent?.slice(0,1000)||selected});title.textContent=result.count?`${Lingo.labels[status]} olarak kaydedildi`:'Bu kelime zaten bu durumda';
+      const word=single.word;
+      const result=await message({type:'change',words:[word],status,example:getSelection()?.anchorNode?.parentElement?.closest(blockSelector)?.textContent?.slice(0,1000)||selected});title.textContent=result.count?`${Lingo.labels[status]} olarak kaydedildi`:single.phrase?'Bu öbek zaten bu durumda':'Bu kelime zaten bu durumda';
       actions.replaceChildren();if(result.undoId)add('Geri al',async()=>{await message({type:'undo',id:result.undoId});hide();});add('Kapat',async()=>hide());
     });
-    else {const note=document.createElement('div');note.className='note';note.textContent=`${list.length} benzersiz kelime • Panelde seçerek ekle`;card.append(note);}
-    host.style.display='block';positionCard(rect);translateSelection(selected,request,translationText,rect);
+    else {const note=document.createElement('div');note.className='note';const phraseCount=terms.filter(term=>term.phrase).length;note.textContent=`${list.length} benzersiz ${phraseCount?`öğe (${phraseCount} öbek)`:'kelime'} • Panelde seçerek ekle`;card.append(note);}
+    const pendingError=from=>{for(const phrase of phraseOutputs.slice(from))phrase.output.textContent='Çeviri tamamlanamadı.';if(contextOutput)contextOutput.textContent='Çeviri tamamlanamadı.';};
+    const translateContext=()=>{if(contextOutput)translateSelection(details.sentence,request,contextOutput,rect);};
+    const translatePhrases=(index=0)=>{
+      if(index>=phraseOutputs.length){translateContext();return;}
+      const phrase=phraseOutputs[index];
+      if(phrase.text===selected){phrase.output.textContent=translationText.textContent;translatePhrases(index+1);return;}
+      translateSelection(phrase.text,request,phrase.output,rect,result=>{if(result===null)pendingError(index+1);else translatePhrases(index+1);});
+    };
+    host.style.display='block';positionCard(rect);translateSelection(selected,request,translationText,rect,result=>{if(result===null)pendingError(0);else translatePhrases();});
   }
   document.addEventListener('pointerup',e=>{
     if(e.composedPath().includes(host)||!settings.enabled||!settings.menu||settings.siteModes[location.hostname]==='off')return;
     setTimeout(()=>{const selection=getSelection();const text=selection?.toString().trim();const el=selection?.anchorNode?.parentElement;
-      if(!text||!selection.rangeCount||!el||!allowed(el)){hide();return;}show(text,selection.getRangeAt(0).getBoundingClientRect());},20);
+      if(!text||!selection.rangeCount||!el||!allowed(el)){hide();return;}show(text,selection.getRangeAt(0).getBoundingClientRect(),selectionDetails(selection,el));},20);
   });
   document.addEventListener('keydown',e=>{if(e.key==='Escape')hide();});
   document.addEventListener('pointerdown',e=>{if(!e.composedPath().includes(host))hide();});

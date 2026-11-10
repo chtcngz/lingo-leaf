@@ -1,5 +1,6 @@
 const $ = id => document.getElementById(id);
 let data={words:{},settings:Lingo.settings(),events:[],activity:{}}, currentView='home', filter='all', limit=80, selected=new Set(), picked=new Set(), activeHost='', sourceURL='', detailWord='', toastTimer;
+const candidatePhrases=Lingo.candidateIndex(globalThis.LingoPhrases||[]);
 const el=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;};
 async function send(msg){const response=await chrome.runtime.sendMessage(msg);if(!response?.ok)throw Error(response?.error||'İşlem tamamlanamadı.');return response.result;}
 function toast(text,undo){clearTimeout(toastTimer);const box=$('toast');box.replaceChildren(document.createTextNode(text));if(undo){const b=el('button','','Geri al');b.style.marginLeft='12px';b.onclick=()=>safe(undo);box.append(b);}box.hidden=false;toastTimer=setTimeout(()=>box.hidden=true,undo?12000:6000);}
@@ -52,12 +53,12 @@ $('bulk-apply').onclick=()=>safe(async()=>{await change([...selected],$('bulk-st
 function setSource(text,url=''){$('source').value=text;sourceURL=url;picked.clear();renderTokens();$('source-origin').textContent=url?'Seçtiğin metin kaynak sayfasıyla birlikte kaydedilecek.':'';}
 $('source').oninput=()=>{picked.clear();renderTokens();};
 function renderTokens(){
-  const tokens=Lingo.unique($('source').value);$('token-list').replaceChildren();
+  const tokens=Lingo.extractTerms($('source').value,candidatePhrases,data.words);$('token-list').replaceChildren();
   if(!tokens.length){$('token-list').append(el('p','caption','Bir metin seçtiğinde kelimeler burada görünür.'));return;}
-  for(const word of tokens.slice(0,600)){const label=el('label','token'),input=el('input');input.type='checkbox';input.checked=picked.has(word);input.onchange=()=>input.checked?picked.add(word):picked.delete(word);label.append(input,document.createTextNode(word));if(Object.hasOwn(data.words,word))label.append(el('small','',Lingo.labels[data.words[word].status]));$('token-list').append(label);}
+  for(const {word,phrase} of tokens.slice(0,600)){const label=el('label','token'),input=el('input');input.type='checkbox';input.checked=picked.has(word);input.onchange=()=>input.checked?picked.add(word):picked.delete(word);label.append(input,document.createTextNode(word));if(Object.hasOwn(data.words,word))label.append(el('small','',Lingo.labels[data.words[word].status]));else if(phrase)label.append(el('small','','öbek'));$('token-list').append(label);}
   if(tokens.length>600)$('token-list').append(el('p','caption','İlk 600 kelime gösteriliyor. Daha kısa bir bölüm seçebilirsin.'));
 }
-$('pick-all').onclick=()=>{const list=Lingo.unique($('source').value).slice(0,600);if(list.every(w=>picked.has(w)))picked.clear();else list.forEach(w=>picked.add(w));renderTokens();};
+$('pick-all').onclick=()=>{const list=Lingo.terms($('source').value,candidatePhrases,data.words).slice(0,600);if(list.every(w=>picked.has(w)))picked.clear();else list.forEach(w=>picked.add(w));renderTokens();};
 $('save-picked').onclick=()=>safe(async()=>{if(!picked.size)return toast('Önce eklemek istediğin kelimeleri seç.');await change([...picked],$('pick-status').value,$('source').value);});
 $('save-phrase').onclick=()=>safe(async()=>{const phrase=Lingo.normalize($('source').value);if(!Lingo.validKey(phrase))return toast('İfade en fazla 500 karakter olmalı; yalnızca İngilizce kelimeler, boşluk, kesme işareti ve tire içerebilir.');await change([phrase],$('pick-status').value,$('source').value);});
 function renderSettings(){for(const k of ['enabled','menu'])$(k).checked=data.settings[k];for(const k of ['goal','theme','intensity'])$(k).value=data.settings[k];for(const k of ['unknown','learning','learned'])$(`color-${k}`).value=data.settings.colors[k];theme();}

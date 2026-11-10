@@ -1,4 +1,4 @@
-# 0.3.0 doğrulama notları
+# 0.4.0 doğrulama notları
 
 10 Kasım 2026 tarihinde kontrol edildi:
 
@@ -9,6 +9,7 @@
 - Ayrı Chrome test oturumunda 420px panel genişliği; toplu ekleme, gerçek arka plan koduyla not düzenleme ve 30 günlük grafik.
 - CSS Custom Highlight API ile gerçek metin rengi kuralları; alt çizgi ve metni saran yeni DOM elemanları olmaması.
 - Inline öğeler arasında kayıtlı ifade, karma dil/kod/görsel zemin dışlama, dinamik içerik ve renklendirmeyi kapatma.
-- 0.3.0 değişikliklerinden sonra JavaScript sözdizimi, manifest JSON ve `git diff --check` kontrolü.
+- 0.4.0 için `node --test tests/phrases.test.js`: `give up`, çekimli/ayrık öbekler, kelime sınırları, kayıtlı öbeği atlama, cümle seçimi, düzensiz/ikilenen fiil biçimleri, öbeklerin tek öğe olarak çıkarılması ve ayrık kayıtlı öbek vurgusu.
+- JavaScript sözdizimi, manifest JSON ve `git diff --check` kontrolü.
 
-Chrome storage/runtime/sidePanel/i18n çağrıları önceki tarayıcı testinde taklit edildi; kelime yönetiminde gerçek background.js çalıştırıldı. 0.3.0 için seçim kartına yerel Translator API akışı eklendi. Kurulu Chrome 157'de sayfa bağlamında Translator API görüldü. Chrome'un standart sürümü komut satırından paketlenmemiş eklenti yüklemeyi desteklemediği için gerçek eklenti bağlamında dil paketi indirmesi ve çeviri sonucu henüz doğrulanmadı. Kullanıcı hareketiyle yan panel açılması ve farklı sitelerde uyumluluk denemesi de yapılmalıdır.
+Chrome storage/runtime/sidePanel/i18n çağrıları önceki tarayıcı testinde taklit edildi; kelime yönetiminde gerçek background.js çalıştırıldı. Kurulu Chrome 157'de Anadolu Ajansı haberindeki kelime seçimi, seçim kartı, cümle çevirisi ve panel geçişi önceki sürümde denendi. Başlık seçimi dil kontrolü yüzünden engelleniyordu; bu sürümde kontrol sırası düzeltildi. 0.4.0'ın yeni öbek önerisi ve bağlam alanı kurulu eklentide henüz denenmedi. Gerçek Chrome'da dil paketi indirmesi, yeni kart akışı ve farklı sitelerde uyumluluk yeniden doğrulanmalıdır.

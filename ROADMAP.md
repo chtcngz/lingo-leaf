@@ -1,6 +1,6 @@
 # LingoLeaf — Yol haritası
 
-Güncelleme: 10 Kasım 2026 · Sürüm: 0.3.0
+Güncelleme: 10 Kasım 2026 · Sürüm: 0.4.0
 
 ## Kapsam
 
@@ -52,10 +52,17 @@ Güncelleme: 10 Kasım 2026 · Sürüm: 0.3.0
 - [x] Dil paketi indirme durumu, tekrar deneme ve uzun çeviriler için kaydırılabilir kart.
 - [ ] Chrome 138+ yüklü gerçek eklentide ilk dil paketi indirmesi ve çeviri doğrulaması.
 
+## 0.4.0 bağlam ve öbek önerileri
+
+- [x] Tek kelime seçiminde çevre cümlenin çevirisini ayrı gösterme.
+- [x] Yerel WordNet adaylarından fiil öbeklerini çekimli ve ayrık biçimlerde önerme.
+- [x] Öbeği kullanıcı onayıyla öğreniyorum listesine ekleme.
+- [x] Seçimde, panelde ve sağ tık menüsünde öbekleri tek öğe olarak çıkarma; düzensiz fiiller ve ünsüz ikilenmesi.
+- [x] Tekrarlanan seçimler için sayfa belleğinde çeviri önbelleği.
+
 ## Sonraki çeviri geliştirmeleri
 
-- [ ] Bağlama uygun kelime anlamları ve cümle çevirisi ayrımı.
-- [ ] Tekrarlanan seçimler için çeviri önbelleği.
+- [ ] Kelime için bağlama uygun sözlük anlamı ve cümle çevirisi ayrımı.
 - [ ] Bağlama göre anlam, telaffuz ve açıklamalar.
 
 ## İsteğe bağlı sonraki özellikler
@@ -63,7 +70,7 @@ Güncelleme: 10 Kasım 2026 · Sürüm: 0.3.0
 Bunlar temel isteklerin dışında kalan genişletmelerdir:
 
 - [ ] Aralıklı tekrar ve kartlar.
-- [ ] İlişkili kelime çekimleri ve otomatik deyim önerileri.
+- [ ] Daha geniş deyim ve isim öbekleri; ayrık yapılarda daha güvenilir dil çözümleme.
 - [ ] İsteğe bağlı cihazlar arası eşitleme ve hesap.
 - [ ] Görsel/degradeli zeminleri analiz edip güvenle renklendirme.
 
