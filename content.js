@@ -20,15 +20,11 @@
     for (const el of chain) { const c = rgb(getComputedStyle(el).backgroundColor); const a = c[3] ?? 1; result = result.map((v,i) => Math.round(c[i]*a+v*(1-a))); }
     return {color:result,complex:chain.some(el=>getComputedStyle(el).backgroundImage!=='none')};
   }
-  const luminance = c => c.slice(0,3).map(v => {v/=255; return v<=.04045?v/12.92:((v+.055)/1.055)**2.4;}).reduce((s,v,i)=>s+v*[.2126,.7152,.0722][i],0);
-  function accessible(hex, bg, original) {
-    let c = [1,3,5].map(i=>parseInt(hex.slice(i,i+2),16));
-    if (c.some(n=>!Number.isFinite(n))) c=[150,130,200];
-    const mix={soft:.58,normal:.8,strong:1}[settings.intensity];
-    c=c.map((v,i)=>Math.round(v*mix+(original[i]??v)*(1-mix)));
-    const lb=luminance(bg), target = lb > .179 ? 0 : 255;
-    for (let i=0;i<50;i++) { const lc=luminance(c); if ((Math.max(lb,lc)+.05)/(Math.min(lb,lc)+.05)>=4.5) break; c=c.map(v=>Math.round(v*.9+target*.1)); }
-    return `rgb(${c.join(',')})`;
+  const styleCache=new Map();
+  function highlightStyle(status,info){
+    const key=[status,settings.colors[status],settings.intensity,info.bg,info.original,info.font.size,info.font.weight].join('|');
+    if(!styleCache.has(key)){if(styleCache.size>500)styleCache.clear();styleCache.set(key,Lingo.highlightStyle(settings.colors[status],info.bg,info.original,settings.intensity,info.font));}
+    return styleCache.get(key);
   }
   function allowed(el) {
     if (el.closest(excluded)) return false;
@@ -78,7 +74,7 @@
       const el=node.parentElement;
       if (!el || !node.textContent || el.closest(excluded)) continue;
       let info=cached.get(el);
-      if (!info) {const cs=getComputedStyle(el),bg=background(el); info={visible:cs.display!=='none'&&cs.visibility!=='hidden'&&el.getClientRects().length>0&&!el.closest('[hidden]'),bg:bg.color,complex:bg.complex,original:rgb(cs.color)};cached.set(el,info);}
+      if (!info) {const cs=getComputedStyle(el),bg=background(el); info={visible:cs.display!=='none'&&cs.visibility!=='hidden'&&el.getClientRects().length>0&&!el.closest('[hidden]'),bg:bg.color,complex:bg.complex,original:rgb(cs.color),font:{size:parseFloat(cs.fontSize)||16,weight:Number(cs.fontWeight)||400}};cached.set(el,info);}
       if (!info.visible) continue;
       textLength+=node.length;if(textLength>450000){limited=true;break;}
       const block=textBlock(el);
@@ -99,8 +95,8 @@
         for(let i=segmentIndex;i<item.segments.length;i++){
           const seg=item.segments[i],start=Math.max(token.start,seg.start),end=Math.min(token.start+token.length,seg.start+seg.node.length);
           if(seg.start>=token.start+token.length)break;if(end<=start||seg.info.complex)continue;
-          const color=accessible(settings.colors[status],seg.info.bg,seg.info.original),key=`${status}|${color}`;
-          if(!groups.has(key))groups.set(key,{color,ranges:[]});const range=new Range();range.setStart(seg.node,start-seg.start);range.setEnd(seg.node,end-seg.start);groups.get(key).ranges.push(range);
+          const style=highlightStyle(status,seg.info),key=`${status}|${style.color}|${style.background}`;
+          if(!groups.has(key))groups.set(key,{...style,ranges:[]});const range=new Range();range.setStart(seg.node,start-seg.start);range.setEnd(seg.node,end-seg.start);groups.get(key).ranges.push(range);
         }
       }
     }
@@ -108,7 +104,7 @@
     const rules=[];let index=0;
     for (const group of groups.values()) {
       const name=`lingoleaf-${index++}`; const highlight=new Highlight();for(const r of group.ranges)highlight.add(r);
-      CSS.highlights.set(name,highlight); names.add(name); rules.push(`::highlight(${name}) { color: ${group.color}; }`);
+      CSS.highlights.set(name,highlight); names.add(name); rules.push(`::highlight(${name}) { color: ${group.color};${group.background?` background-color: ${group.background};`:''} }`);
     }
     sheet.replaceSync(rules.join('\n'));
     pageStats={total:seen.size,known:known.size,limited,english:seen.size>0,host:location.hostname};

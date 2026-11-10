@@ -1,4 +1,4 @@
-# LingoLeaf 0.5.1
+# LingoLeaf 0.6.0
 
 İngilizce okurken kelime ve ifadelerini yönet. Türkçe arayüz, yerel kayıt, renklendirme ve seçim kartında Türkçe çeviri.
 
@@ -28,7 +28,7 @@ Seçim kartındaki yerel çeviri için masaüstü Chrome 138 veya daha yeni sür
 
 - İngilizce kelimelerin **metin rengi** değişir; alt çizgi yoktur.
 - Bilinmeyen: mor; öğreniyorum: sıcak ton; öğrendim: yeşil; biliyorum: özgün renk.
-- Kelime seçip durum düğmesine bas. Daha uzun metin seçip **Kelimeleri yönet** ile hangi kelimeleri ekleyeceğini belirle.
+- Kelime seçip durum düğmesine bas. Daha uzun metin seçip **Kelimeleri yönet** ile hangi kelimeleri ekleyeceğini belirle. Panelde yeni kelimeler üstte; kayıtlı olanlar Öğreniyorum/Öğrendim gruplarında, bildiklerin en altta kapalı durur. Kaydettikten sonra seçim temizlenir, böylece sonraki kayıt öncekileri değiştirmez.
 - Metin seçildiğinde açılan kartta Türkçe çeviri otomatik görünür. Çeviri başarısız olursa karttan tekrar deneyebilirsin.
 - Tek kelime seçtiğinde geçtiği cümlenin Türkçe çevirisi de gösterilir. Bu çeviri kelimenin bağlamını anlamaya yardım eder; ayrı bir sözlük anlamı değildir.
 - `give up` gibi fiil öbekleri seçimin çevresinde aranır. `gave up` ve `gave it up` gibi biçimler önerilebilir; öbeği **Öğreniyorum olarak ekle** ile kendin kaydedersin. Öneriler yanılabilir.
@@ -50,7 +50,7 @@ Seçim kartındaki yerel çeviri için masaüstü Chrome 138 veya daha yeni sür
 
 ## Görünüm ve dil
 
-Ayarlar'dan renkleri, hafif/normal/belirgin ayarını, temayı ve günlük hedefi değiştir. Renkler düz zeminde okunabilir tona uyarlanır; görsel veya degradeli zeminlerde özgün renk korunur. Genel bakış → Bu sayfada alanından otomatik algılamayı elle düzeltebilir veya siteyi duraklatabilirsin.
+Ayarlar'dan renkleri, hafif/normal/belirgin ayarını, temayı ve günlük hedefi değiştir. Renkler sabit değildir: her metin için zemin, yazı rengi ve yazı boyutuna göre yeniden hesaplanır. Durumun tonu korunur, doygunluk belirgin tutulur ve açıklık okunurluk sınırına (normal metinde en az 4.5:1, büyük başlıkta 3:1, ince küçük yazıda 5.5:1, koyu zeminde biraz daha fazla) göre ayarlanır. Normal ve Belirgin seviyeler kelimenin arkasına hafif bir zemin de ekler; Ayarlar'daki önizleme açık ve koyu zemindeki sonucu gösterir. Görsel veya degradeli zeminlerde özgün renk korunur. Genel bakış → Bu sayfada alanından otomatik algılamayı elle düzeltebilir veya siteyi duraklatabilirsin.
 
 Dil etiketleri ve yeterince uzun paragraflarda Chrome dil algılama kullanılır. Çok kısa veya karma metinlerde kesinlik garanti edilmez. İngilizce olmayan açık dil etiketleri dışlanır; siteyi elle etkinleştirmek bu dil sınırlamasını kaldırır.
 

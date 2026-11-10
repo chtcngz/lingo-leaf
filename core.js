@@ -112,6 +112,41 @@
   }
   function streak(days,now=new Date()){const active=new Set(days);let d=new Date(now),count=0;if(!active.has(day(d)))d.setDate(d.getDate()-1);while(active.has(day(d))){count++;d.setDate(d.getDate()-1);}return count;}
   function parseCSV(text){const first=text.split(/\r?\n/,1)[0],delimiter=(first.match(/;/g)||[]).length>(first.match(/,/g)||[]).length?';':',';const rows=[];let row=[],field='',quoted=false;for(let i=0;i<text.length;i++){const c=text[i];if(c==='"'){if(quoted&&text[i+1]==='"'){field+='"';i++;}else quoted=!quoted;}else if(!quoted&&(c===delimiter||c==='\n'||c==='\r')){row.push(field);field='';if(c==='\n'||c==='\r'){if(c==='\r'&&text[i+1]==='\n')i++;if(row.some(Boolean))rows.push(row);row=[];}}else field+=c;}if(quoted)throw Error('CSV içinde kapanmamış tırnak var.');row.push(field);if(row.some(Boolean))rows.push(row);return rows;}
-  globalThis.Lingo = {statuses, labels, defaults, normalize, tokens, unique, validKey, settings, day, englishHint, phraseIndex, matchedTokens, candidateIndex, bundledIndex, extractTerms, selectionTerms, terms, phraseSuggestions, sentenceContext, streak, parseCSV};
+  // Highlight colors are rebuilt per background and font in OKLCH: the status hue is kept, chroma stays vivid,
+  // and lightness is pushed only as far toward the background as the contrast target allows.
+  const toLinear=v=>{v/=255;return v<=.04045?v/12.92:((v+.055)/1.055)**2.4;};
+  const fromLinear=v=>Math.round(255*Math.min(1,Math.max(0,v<=.0031308?12.92*v:1.055*v**(1/2.4)-.055)));
+  const luminance=c=>c.slice(0,3).map(toLinear).reduce((s,v,i)=>s+v*[.2126,.7152,.0722][i],0);
+  const contrast=(a,b)=>{const x=luminance(a),y=luminance(b);return (Math.max(x,y)+.05)/(Math.min(x,y)+.05);};
+  function oklab(rgb){
+    const [r,g,b]=rgb.slice(0,3).map(toLinear);
+    const l=Math.cbrt(.4122214708*r+.5363325363*g+.0514459929*b),m=Math.cbrt(.2119034982*r+.6806995451*g+.1073969566*b),s=Math.cbrt(.0883024619*r+.2817188376*g+.6299787005*b);
+    return [.2104542553*l+.793617785*m-.0040720468*s,1.9779984951*l-2.428592205*m+.4505937099*s,.0259040371*l+.7827717662*m-.808675766*s];
+  }
+  // OKLCH → sRGB, lowering chroma until the color fits the gamut.
+  function fromOklch(L,C,h){
+    for(let c=C;;c*=.9){
+      const a=c*Math.cos(h),b=c*Math.sin(h);
+      const l=(L+.3963377774*a+.2158037573*b)**3,m=(L-.1055613458*a-.0638541728*b)**3,s=(L-.0894841775*a-1.291485548*b)**3;
+      const lin=[4.0767416621*l-3.3077115913*m+.2309699292*s,-1.2684380046*l+2.6097574011*m-.3413193965*s,-.0041960863*l-.7034186147*m+1.707614701*s];
+      if(c<.005||lin.every(v=>v>=-.0001&&v<=1.0001))return lin.map(v=>fromLinear(Math.max(0,v)));
+    }
+  }
+  const intensities={soft:{chroma:.13,tint:0},normal:{chroma:.16,tint:.07},strong:{chroma:.19,tint:.14}};
+  function hexRGB(hex){const c=[1,3,5].map(i=>parseInt(String(hex).slice(i,i+2),16));return c.every(Number.isFinite)?c:[150,130,200];}
+  // font: {size (px), weight}. Large text may be lighter (WCAG 3:1); thin small text needs more than 4.5:1.
+  function highlightStyle(hex,bg,text,intensity='soft',font={size:16,weight:400}){
+    const mode=intensities[intensity]||intensities.soft,status=hexRGB(hex);
+    const large=font.size>=24||(font.size>=18.5&&font.weight>=700),target=large?3.2:font.weight<350||font.size<13?5.5:4.6;
+    const ground=mode.tint?bg.map((v,i)=>Math.round(status[i]*mode.tint+v*(1-mode.tint))):bg.slice(0,3);
+    const [,a,b]=oklab(status),hue=Math.atan2(b,a),chroma=Math.max(mode.chroma,Math.hypot(a,b));
+    // Dim text on a dark page is hard to read, so dark grounds ask for a little more contrast.
+    const light=luminance(ground)>.18,goal=light?target:target+1.4;let color=light?[0,0,0]:[255,255,255];
+    for(let i=0;i<=100;i++){const L=light?.98-i*.0098:.02+i*.0098,candidate=fromOklch(L,chroma,hue);if(contrast(candidate,ground)>=goal){color=candidate;break;}}
+    // Keep the highlight apart from the page's own text color; otherwise the status is invisible.
+    if(Math.hypot(...oklab(color).map((v,i)=>v-oklab(text)[i]))<.08)color=fromOklch(oklab(color)[0],chroma*1.3,hue);
+    return {color:`rgb(${color.join(',')})`,background:mode.tint?`rgba(${status.join(',')},${mode.tint})`:'',contrast:Math.round(contrast(color,ground)*10)/10};
+  }
+  globalThis.Lingo = {statuses, labels, defaults, normalize, tokens, unique, validKey, settings, day, englishHint, phraseIndex, matchedTokens, candidateIndex, bundledIndex, extractTerms, selectionTerms, terms, phraseSuggestions, sentenceContext, streak, parseCSV, highlightStyle, contrast};
   if (typeof module !== 'undefined') module.exports = globalThis.Lingo;
 })();

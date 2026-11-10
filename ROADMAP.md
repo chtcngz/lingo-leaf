@@ -1,6 +1,6 @@
 # LingoLeaf — Yol haritası
 
-Güncelleme: 10 Kasım 2026 · Sürüm: 0.5.1
+Güncelleme: 10 Kasım 2026 · Sürüm: 0.6.0
 
 ## Kapsam
 
@@ -72,6 +72,14 @@ Güncelleme: 10 Kasım 2026 · Sürüm: 0.5.1
 
 - [x] Dil algılayıcının emin olmadığı başlıklar sayfa diline göre renklendirilir (özel adlarla dolu haber başlıkları).
 - [x] Arası açık öbeğin tamamı seçildiğinde (`ruling anyone out`) kart onu tek öbek (`rule out`) olarak gösterir.
+
+## 0.6.0 kelime yönetimi ve uyarlanan renkler
+
+- [x] Panelde kelime seçimini Yeni / Öğreniyorum / Öğrendim / Biliyorum gruplarına ayırma; bildikleri altta kapalı tutma.
+- [x] Kaydettikten sonra seçimi temizleme; sonraki kaydın öncekileri değiştirmemesi.
+- [x] Vurgu renklerini zemine, yazı rengine ve yazı boyutuna göre OKLCH'de yeniden hesaplama.
+- [x] Normal/Belirgin seviyede hafif zemin vurgusu ve ayarlarda açık/koyu önizleme.
+- [ ] Gerçek Chrome eklentisinde farklı sitelerde renklerin göz yormadan okunurluğunun doğrulanması.
 
 ## Sonraki çeviri geliştirmeleri
 
