@@ -110,7 +110,7 @@
   const shadow=host.attachShadow({mode:'closed'});
   const style=document.createElement('style');style.textContent=`:host{font:13px system-ui;color:#1c3430} .card{box-sizing:border-box;width:min(360px,calc(100vw - 16px));max-height:calc(100vh - 16px);overflow-y:auto;background:#fff;border:1px solid #d5e4dc;border-radius:14px;box-shadow:0 10px 40px #0003;padding:10px} .title{font-size:12px;color:#63776c;padding:3px 4px 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis} .translation{border-top:1px solid #e4eee8;margin:2px 0 10px;padding:10px 4px 2px} .translation-label{font-size:10px;font-weight:700;letter-spacing:.5px;color:#63776c;margin-bottom:5px} .translation-text{font-size:14px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere} .actions{display:flex;gap:5px;flex-wrap:wrap}button{font:12px system-ui;cursor:pointer;border:0;border-radius:8px;background:#edf4ef;color:#193d30;padding:8px}button:hover{background:#d4e8dc} .note{padding:6px;font-size:12px}`;
   shadow.append(style);const card=document.createElement('div');card.className='card';shadow.append(card);document.documentElement.append(host);
-  let selected='',translationRequest=0,translatorPromise=null;
+  let selected='',translationRequest=0,translatorPromise=null,translatorState=null;
   function hide(){translationRequest++;host.style.display='none';}
   function positionCard(rect){
     const width=card.getBoundingClientRect().width,height=card.getBoundingClientRect().height;
@@ -123,9 +123,10 @@
     try{
       if(!globalThis.Translator){update('Yerel çeviri için Chrome 138 veya üzeri gerekir.');return;}
       if(!translatorPromise){
-        const state=await Translator.availability({sourceLanguage:'en',targetLanguage:'tr'});
+        const state=translatorState??await Translator.availability({sourceLanguage:'en',targetLanguage:'tr'});
         if(state==='unavailable'){update('İngilizce–Türkçe çeviri bu tarayıcıda kullanılamıyor.');return;}
         if(request!==translationRequest)return;
+        translatorState=state;
         if(state!=='available')update('Çeviri dil paketi hazırlanıyor…');
         translatorPromise=Translator.create({sourceLanguage:'en',targetLanguage:'tr',monitor(m){
           m.addEventListener('downloadprogress',e=>update(`Çeviri dil paketi indiriliyor: %${Math.round(e.loaded*100)}`));
