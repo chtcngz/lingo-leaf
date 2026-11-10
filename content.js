@@ -83,11 +83,17 @@
       if (processed%180===0) await new Promise(r=>setTimeout(r,0));
     }
     const phrases=Lingo.phraseIndex(words);
+    const english=[];
     for(const [block,item] of blocks){
       if(id!==generation)return;
-      const english=await detectBlock(block);blockVerdicts.set(block,english);if(!english)continue;
+      const verdict=await detectBlock(block);blockVerdicts.set(block,verdict);if(verdict)english.push({...item,tokens:Lingo.matchedTokens(item.text,phrases)});
+    }
+    // Names are judged across the whole page so a sentence-initial "Netanyahu" is caught by its other mentions.
+    const nameSets=settings.names?Lingo.nameTokens(english):english.map(()=>new Set());
+    for(const [b,item] of english.entries()){
       let segmentIndex=0;
-      for(const token of Lingo.matchedTokens(item.text,phrases)){
+      for(const [t,token] of item.tokens.entries()){
+        if(nameSets[b].has(t)&&!token.phraseStatus&&!Object.hasOwn(words,token.word))continue;
         seen.add(token.word);const status=token.phraseStatus||words[token.word]?.status||'unknown';
         if(status==='known'||status==='learned')known.add(token.word);
         if(status==='known')continue;

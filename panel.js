@@ -52,18 +52,26 @@ $('more').onclick=()=>{limit+=80;renderLibrary();};$('select-all').onclick=()=>{
 $('bulk-apply').onclick=()=>safe(async()=>{await change([...selected],$('bulk-status').value);selected.clear();renderBulk();});
 function setSource(text,url=''){$('source').value=text;sourceURL=url;picked.clear();splitPhrases.clear();renderTokens();$('source-origin').textContent=url?'Seçtiğin metin kaynak sayfasıyla birlikte kaydedilecek.':'';}
 $('source').oninput=()=>{picked.clear();splitPhrases.clear();renderTokens();};
-// New words come first; saved ones sit in their status group so a later save never touches them by accident. Known words stay folded at the bottom.
-const tokenGroups=[['new','Yeni','unknown'],['learning',Lingo.labels.learning,'learning'],['learned',Lingo.labels.learned,'learned'],['known',Lingo.labels.known,'known']];
-let knownOpen=false;
+// New words come first; saved ones sit in their status group so a later save never touches them by accident. Names and known words stay folded at the bottom.
+const tokenGroups=[['new','Yeni','unknown'],['learning',Lingo.labels.learning,'learning'],['learned',Lingo.labels.learned,'learned'],['names','Özel adlar','names'],['known',Lingo.labels.known,'known']];
+const foldedGroups=new Set(['names','known']),openGroups=new Set();
+// Words used only as proper names in the source text (people, places, organisations).
+function sourceNames(text){
+  if(!data.settings.names)return new Set();
+  const list=Lingo.tokens(text),names=Lingo.nameTokens([{text,tokens:list}])[0],words=new Set(list.filter((token,i)=>names.has(i)).map(token=>token.word));
+  list.forEach((token,i)=>{if(!names.has(i))words.delete(token.word);});return words;
+}
+function termGroup(term,names){return data.words[term.word]?.status||(!term.phrase&&names.has(term.word)?'names':'new');}
 function currentTerms(){return Lingo.extractTerms($('source').value,candidatePhrases,data.words,splitPhrases).slice(0,600);}
 function renderTokens(){
   const all=Lingo.extractTerms($('source').value,candidatePhrases,data.words,splitPhrases),terms=all.slice(0,600);$('token-list').replaceChildren();
+  const names=sourceNames($('source').value);
   for(const word of picked)if(!terms.some(term=>term.word===word))picked.delete(word);
   if(!terms.length){$('token-list').append(el('p','caption','Bir metin seçtiğinde kelimeler burada görünür.'));renderPicked();return;}
   for(const [key,title,dot] of tokenGroups){
-    const group=terms.filter(term=>(data.words[term.word]?.status||'new')===key);if(!group.length)continue;
-    const box=el(key==='known'?'details':'div','token-group'),head=el(key==='known'?'summary':'div','token-head');
-    if(key==='known'){box.open=knownOpen;box.ontoggle=()=>knownOpen=box.open;}
+    const group=terms.filter(term=>termGroup(term,names)===key);if(!group.length)continue;
+    const folded=foldedGroups.has(key),box=el(folded?'details':'div','token-group'),head=el(folded?'summary':'div','token-head');
+    if(folded){box.open=openGroups.has(key);box.ontoggle=()=>box.open?openGroups.add(key):openGroups.delete(key);}
     const words=group.map(term=>term.word),toggle=el('button','text-button',words.every(w=>picked.has(w))?'Seçimi kaldır':'Tümünü seç');toggle.type='button';
     toggle.onclick=e=>{e.preventDefault();if(words.every(w=>picked.has(w)))words.forEach(w=>picked.delete(w));else words.forEach(w=>picked.add(w));renderTokens();};
     head.append(el('span',`dot ${dot}`),el('b','',title),el('small','',String(group.length)),toggle);box.append(head);
@@ -80,7 +88,7 @@ function renderTokens(){
   renderPicked();
 }
 function renderPicked(){$('save-picked').textContent=picked.size?`${picked.size} seçileni kaydet`:'Seçilenleri kaydet';}
-$('pick-all').onclick=()=>{const fresh=currentTerms().filter(term=>!Object.hasOwn(data.words,term.word)).map(term=>term.word);if(fresh.length&&fresh.every(w=>picked.has(w)))fresh.forEach(w=>picked.delete(w));else fresh.forEach(w=>picked.add(w));renderTokens();};
+$('pick-all').onclick=()=>{const names=sourceNames($('source').value),fresh=currentTerms().filter(term=>termGroup(term,names)==='new').map(term=>term.word);if(fresh.length&&fresh.every(w=>picked.has(w)))fresh.forEach(w=>picked.delete(w));else fresh.forEach(w=>picked.add(w));renderTokens();};
 $('save-picked').onclick=()=>safe(async()=>{if(!picked.size)return toast('Önce eklemek istediğin kelimeleri seç.');const words=[...picked];picked.clear();try{await change(words,$('pick-status').value,$('source').value);}catch(e){words.forEach(w=>picked.add(w));throw e;}finally{renderTokens();}});
 $('save-phrase').onclick=()=>safe(async()=>{const phrase=Lingo.normalize($('source').value);if(!Lingo.validKey(phrase))return toast('İfade en fazla 500 karakter olmalı; yalnızca İngilizce kelimeler, boşluk, kesme işareti ve tire içerebilir.');await change([phrase],$('pick-status').value,$('source').value);});
 function renderPreview(){
@@ -94,8 +102,8 @@ function renderPreview(){
     box.append(sample);
   }
 }
-function renderSettings(){for(const k of ['enabled','menu'])$(k).checked=data.settings[k];for(const k of ['goal','theme','intensity'])$(k).value=data.settings[k];for(const k of ['unknown','learning','learned'])$(`color-${k}`).value=data.settings.colors[k];theme();renderPreview();}
-for(const k of ['enabled','menu','goal','theme','intensity'])$(k).onchange=()=>safe(async()=>{
+function renderSettings(){for(const k of ['enabled','menu','names'])$(k).checked=data.settings[k];for(const k of ['goal','theme','intensity'])$(k).value=data.settings[k];for(const k of ['unknown','learning','learned'])$(`color-${k}`).value=data.settings.colors[k];theme();renderPreview();}
+for(const k of ['enabled','menu','names','goal','theme','intensity'])$(k).onchange=()=>safe(async()=>{
   let value=$(k).type==='checkbox'?$(k).checked:$(k).value;if(k==='goal'){value=Math.max(1,Math.min(1000,Math.floor(Number(value)||5)));$(k).value=value;}
   await send({type:'settings',patch:{[k]:value}});home();toast('Ayar kaydedildi.');
 });

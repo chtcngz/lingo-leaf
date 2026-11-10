@@ -1,4 +1,4 @@
-# LingoLeaf 0.6.0
+# LingoLeaf 0.7.0
 
 İngilizce okurken kelime ve ifadelerini yönet. Türkçe arayüz, yerel kayıt, renklendirme ve seçim kartında Türkçe çeviri.
 
@@ -38,6 +38,7 @@ Seçim kartındaki yerel çeviri için masaüstü Chrome 138 veya daha yeni sür
 - Sağ tık veya **Alt+Shift+L** ile panele geç. Kısayol çakışırsa `chrome://extensions/shortcuts` adresinden değiştir.
 - Aynı kelime tekrar eklenmez. Listeye kayıtlı kelimelerin mevcut durumu görünür.
 - Kaydettiğin çok kelimeli ifadeler aynı paragrafta, kelimeler inline öğelerle ayrılmış olsa da renklendirilir. Uzun ifade önceliklidir.
+- Kişi, yer ve kurum adları (Netanyahu, Gaza Strip, NATO) renklendirilmez; panelde **Özel adlar** grubunda kapalı durur. Cümle ortasında büyük harfle başlayan kelimeler ve kısa büyük harfli kısaltmalar ad sayılır. Cümle başındaki veya Başlık Biçimindeki bir kelime, sayfada başka yerde ad olarak geçip hiç küçük harfle geçmiyorsa ad sayılır; kanıt yoksa renklendirilir. Kaydettiğin kelimeler her zaman renklenir. Ayarlar'daki **Özel adları atla** ile kapatılabilir.
 - Biliyorum kelimeleri ve ifadeleri renklendirilmez. Çekimler ayrı kayıttır.
 
 ## Kelime yönetimi

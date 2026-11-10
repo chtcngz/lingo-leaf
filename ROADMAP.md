@@ -1,6 +1,6 @@
 # LingoLeaf — Yol haritası
 
-Güncelleme: 10 Kasım 2026 · Sürüm: 0.6.0
+Güncelleme: 10 Kasım 2026 · Sürüm: 0.7.0
 
 ## Kapsam
 
@@ -80,6 +80,13 @@ Güncelleme: 10 Kasım 2026 · Sürüm: 0.6.0
 - [x] Vurgu renklerini zemine, yazı rengine ve yazı boyutuna göre OKLCH'de yeniden hesaplama.
 - [x] Normal/Belirgin seviyede hafif zemin vurgusu ve ayarlarda açık/koyu önizleme.
 - [ ] Gerçek Chrome eklentisinde farklı sitelerde renklerin göz yormadan okunurluğunun doğrulanması.
+
+## 0.7.0 özel adlar
+
+- [x] Kişi, yer ve kurum adlarını renklendirmeme ve sayfa istatistiğine katmama.
+- [x] Cümle başı ve Başlık Biçimi için sayfa genelindeki kanıta bakma; kısaltmaları ad sayma.
+- [x] Panelde Özel adlar grubu ve ayarlarda kapatma anahtarı.
+- [ ] Başka yerde geçmeyen cümle başı adları (ör. tek kez geçen `Likud`) için sözlük tabanlı ayrım.
 
 ## Sonraki çeviri geliştirmeleri
 

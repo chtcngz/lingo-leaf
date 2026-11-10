@@ -1,7 +1,7 @@
 (() => {
   const statuses = ['learning', 'learned', 'known'];
   const labels = {learning: 'Öğreniyorum', learned: 'Öğrendim', known: 'Biliyorum', unknown: 'Bilinmeyen'};
-  const defaults = {enabled: true, menu: true, intensity: 'soft', theme: 'system', goal: 5, siteModes: {}, colors: {unknown: '#b8abec', learning: '#efc67b', learned: '#82cbb1'}};
+  const defaults = {enabled: true, menu: true, names: true, intensity: 'soft', theme: 'system', goal: 5, siteModes: {}, colors: {unknown: '#b8abec', learning: '#efc67b', learned: '#82cbb1'}};
   function normalize(text) { return String(text).normalize('NFKC').replace(/[’‘]/g, "'").trim().toLowerCase().replace(/^[^a-z]+|[^a-z]+$/g, '').replace(/\s+/g, ' '); }
   function tokens(text) { return [...String(text).matchAll(/(?<![\p{L}\p{N}_])[A-Za-z]+(?:['’‘][A-Za-z]+)*(?:-[A-Za-z]+)*(?![\p{L}\p{N}_])/gu)].filter(m=>!/[^a-zA-Z'’‘-]/.test(m[0])).map(m => ({word: normalize(m[0]), start: m.index, length: m[0].length})); }
   function unique(text) { return [...new Set(tokens(text).map(t => t.word))]; }
@@ -9,7 +9,7 @@
   function settings(value = {}) {
     const colors={...defaults.colors};for(const k of Object.keys(colors))if(/^#[a-f\d]{6}$/i.test(value.colors?.[k]))colors[k]=value.colors[k];
     const siteModes={};for(const [host,mode] of Object.entries(value.siteModes||{}))if(['auto','on','off'].includes(mode)&&host.length<255)siteModes[host]=mode;
-    return {enabled:typeof value.enabled==='boolean'?value.enabled:true,menu:typeof value.menu==='boolean'?value.menu:true,intensity:['soft','normal','strong'].includes(value.intensity)?value.intensity:'soft',theme:['system','light','dark'].includes(value.theme)?value.theme:'system',goal:Math.max(1,Math.min(1000,Math.floor(Number(value.goal)||5))),colors,siteModes};
+    return {enabled:typeof value.enabled==='boolean'?value.enabled:true,menu:typeof value.menu==='boolean'?value.menu:true,names:typeof value.names==='boolean'?value.names:true,intensity:['soft','normal','strong'].includes(value.intensity)?value.intensity:'soft',theme:['system','light','dark'].includes(value.theme)?value.theme:'system',goal:Math.max(1,Math.min(1000,Math.floor(Number(value.goal)||5))),colors,siteModes};
   }
   function day(date = new Date()) { const d = new Date(date); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
   function englishHint(text) {
@@ -80,6 +80,34 @@
   const byPriority=(a,b)=>b.tokens.length-a.tokens.length||(a.end-a.start)-(b.end-b.start)||a.start-b.start;
   function claim(matches,used,take){for(const match of matches.sort(byPriority)){if(match.tokens.some(t=>used.has(t)))continue;match.tokens.forEach(t=>used.add(t));take(match);}}
   function matchedTokens(text,index){const list=tokens(text);claim(phraseMatches(text,index,list),new Set(),match=>{for(const t of match.tokens)list[t].phraseStatus=match.status;});return list;}
+  // Proper names (people, places, organisations) are left uncolored. A capital letter inside a sentence marks a name;
+  // a capital at a sentence start or in a Title Case heading is ambiguous and counts as a name only when the same word
+  // appears elsewhere as a name and never in lower case. Short all-caps words are acronyms (NATO, UK).
+  function capitalKinds(text,list=tokens(text)){
+    const raws=list.map(token=>text.slice(token.start,token.start+token.length));
+    // Title Case headings capitalise almost every longer word and do not end like a sentence.
+    const letters=raws.filter(raw=>raw.length>3),titleCase=letters.length>=3&&letters.filter(raw=>/^[A-Z]/.test(raw)).length>=letters.length*.75&&!/[.!?]["”’')]*$/.test(text.trim());
+    const shouting=raws.length>=2&&raws.every(raw=>raw===raw.toUpperCase());
+    return list.map((token,i)=>{
+      const raw=raws[i];
+      if(!/^[A-Z]/.test(raw)||token.word==='i'||token.word.startsWith("i'"))return 'lower';
+      if(raw.length>1&&raw===raw.toUpperCase())return shouting?'ambiguous':raw.length<=5?'acronym':'ambiguous';
+      if(titleCase)return 'ambiguous';
+      return /(?:^|[.!?:;…\u0000]|\n)[\s"“”‘’'(\[«—–-]*$/.test(text.slice(0,token.start))?'ambiguous':'mid';
+    });
+  }
+  // blocks: [{text, tokens?}] → one Set of name token indexes per block.
+  function nameTokens(blocks){
+    const lists=blocks.map(block=>block.tokens||tokens(block.text)),kinds=blocks.map((block,b)=>capitalKinds(block.text,lists[b])),evidence=new Map();
+    lists.forEach((list,b)=>list.forEach((token,i)=>{
+      const kind=kinds[b][i];if(kind==='ambiguous')return;
+      const row=evidence.get(token.word)||{name:0,lower:0};row[kind==='lower'?'lower':'name']++;evidence.set(token.word,row);
+    }));
+    return kinds.map((list,b)=>new Set(list.flatMap((kind,i)=>{
+      const row=evidence.get(lists[b][i].word);
+      return kind==='mid'||kind==='acronym'||(kind==='ambiguous'&&row?.name>0&&!row.lower)?[i]:[];
+    })));
+  }
   // Unique terms in reading order; saved phrases win over bundled candidates, and words inside a phrase are not listed again.
   // Candidate phrases named in exclude (split by the user) fall back to separate words.
   function extractTerms(text,candidates,saved={},exclude=new Set()){
@@ -147,6 +175,6 @@
     if(Math.hypot(...oklab(color).map((v,i)=>v-oklab(text)[i]))<.08)color=fromOklch(oklab(color)[0],chroma*1.3,hue);
     return {color:`rgb(${color.join(',')})`,background:mode.tint?`rgba(${status.join(',')},${mode.tint})`:'',contrast:Math.round(contrast(color,ground)*10)/10};
   }
-  globalThis.Lingo = {statuses, labels, defaults, normalize, tokens, unique, validKey, settings, day, englishHint, phraseIndex, matchedTokens, candidateIndex, bundledIndex, extractTerms, selectionTerms, terms, phraseSuggestions, sentenceContext, streak, parseCSV, highlightStyle, contrast};
+  globalThis.Lingo = {statuses, labels, defaults, normalize, tokens, unique, validKey, settings, day, englishHint, phraseIndex, matchedTokens, candidateIndex, bundledIndex, extractTerms, selectionTerms, nameTokens, terms, phraseSuggestions, sentenceContext, streak, parseCSV, highlightStyle, contrast};
   if (typeof module !== 'undefined') module.exports = globalThis.Lingo;
 })();
