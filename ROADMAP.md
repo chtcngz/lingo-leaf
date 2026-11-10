@@ -1,10 +1,10 @@
 # LingoLeaf — Yol haritası
 
-Güncelleme: 10 Kasım 2026 · Sürüm: 0.2.0
+Güncelleme: 10 Kasım 2026 · Sürüm: 0.3.0
 
 ## Kapsam
 
-İngilizce web metinlerinde kelime ve ifadeleri durumlarına göre renklendirmek; bildiklerini, öğrenmekte olduklarını ve sonradan öğrendiklerini ayrı yönetmek. Kullanıcının isteğiyle **çeviri ertelendi**. Arayüzde çeviri düğmesi, dil paketi indirmesi veya harici çeviri bağlantısı yok.
+İngilizce web metinlerinde kelime ve ifadeleri durumlarına göre renklendirmek; bildiklerini, öğrenmekte olduklarını ve sonradan öğrendiklerini ayrı yönetmek. Seçilen metnin Türkçe çevirisi seçim kartında Chrome'un yerel Translator API'si ile gösterilir.
 
 ## Tamamlanan temel istekler
 
@@ -46,10 +46,16 @@ Güncelleme: 10 Kasım 2026 · Sürüm: 0.2.0
 - [ ] Kullanıcının Chrome profilinde gerçek eklenti yüklemesi, yan panel kullanıcı hareketi ve kısayol denemesi.
 - [ ] Farklı gerçek sitelerde kapsamlı uyumluluk denemesi.
 
-## Ertelenen çeviri
+## 0.3.0 seçim çevirisi
 
-- [ ] Sağlayıcı seçimi ve Google Cloud gibi resmî API için güvenli sunucu bağlantısı.
-- [ ] Kelime/cümle çevirisi, önbellek, kota ve maliyet sınırı.
+- [x] Seçim kartı açıldığında İngilizce–Türkçe çeviriyi otomatik başlatma.
+- [x] Dil paketi indirme durumu, tekrar deneme ve uzun çeviriler için kaydırılabilir kart.
+- [ ] Chrome 138+ yüklü gerçek eklentide ilk dil paketi indirmesi ve çeviri doğrulaması.
+
+## Sonraki çeviri geliştirmeleri
+
+- [ ] Bağlama uygun kelime anlamları ve cümle çevirisi ayrımı.
+- [ ] Tekrarlanan seçimler için çeviri önbelleği.
 - [ ] Bağlama göre anlam, telaffuz ve açıklamalar.
 
 ## İsteğe bağlı sonraki özellikler

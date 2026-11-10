@@ -108,13 +108,48 @@
   const host=document.createElement('div');host.dataset.lingoleaf='true';
   host.style.cssText='all:initial;position:fixed;z-index:2147483647;display:none;';
   const shadow=host.attachShadow({mode:'closed'});
-  const style=document.createElement('style');style.textContent=`:host{font:13px system-ui;color:#1c3430} .card{background:#fff;border:1px solid #d5e4dc;border-radius:14px;box-shadow:0 10px 40px #0003;padding:10px;max-width:330px} .title{font-size:12px;color:#63776c;padding:3px 4px 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:300px} .actions{display:flex;gap:5px;flex-wrap:wrap}button{font:12px system-ui;cursor:pointer;border:0;border-radius:8px;background:#edf4ef;color:#193d30;padding:8px}button:hover{background:#d4e8dc} .note{padding:6px;font-size:12px}`;
+  const style=document.createElement('style');style.textContent=`:host{font:13px system-ui;color:#1c3430} .card{box-sizing:border-box;width:min(360px,calc(100vw - 16px));max-height:calc(100vh - 16px);overflow-y:auto;background:#fff;border:1px solid #d5e4dc;border-radius:14px;box-shadow:0 10px 40px #0003;padding:10px} .title{font-size:12px;color:#63776c;padding:3px 4px 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis} .translation{border-top:1px solid #e4eee8;margin:2px 0 10px;padding:10px 4px 2px} .translation-label{font-size:10px;font-weight:700;letter-spacing:.5px;color:#63776c;margin-bottom:5px} .translation-text{font-size:14px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere} .actions{display:flex;gap:5px;flex-wrap:wrap}button{font:12px system-ui;cursor:pointer;border:0;border-radius:8px;background:#edf4ef;color:#193d30;padding:8px}button:hover{background:#d4e8dc} .note{padding:6px;font-size:12px}`;
   shadow.append(style);const card=document.createElement('div');card.className='card';shadow.append(card);document.documentElement.append(host);
-  let selected='';
-  function hide(){host.style.display='none';}
+  let selected='',translationRequest=0,translatorPromise=null;
+  function hide(){translationRequest++;host.style.display='none';}
+  function positionCard(rect){
+    const width=card.getBoundingClientRect().width,height=card.getBoundingClientRect().height;
+    host.style.left=`${Math.max(8,Math.min(rect.left,innerWidth-width-8))}px`;
+    const below=rect.bottom+10,above=rect.top-height-10;
+    host.style.top=`${below+height<=innerHeight-8?below:above>=8?above:Math.max(8,innerHeight-height-8)}px`;
+  }
+  async function translateSelection(text,request,output,rect){
+    const update=value=>{if(request!==translationRequest)return;output.textContent=value;positionCard(rect);};
+    try{
+      if(!globalThis.Translator){update('Yerel çeviri için Chrome 138 veya üzeri gerekir.');return;}
+      if(!translatorPromise){
+        const state=await Translator.availability({sourceLanguage:'en',targetLanguage:'tr'});
+        if(state==='unavailable'){update('İngilizce–Türkçe çeviri bu tarayıcıda kullanılamıyor.');return;}
+        if(request!==translationRequest)return;
+        if(state!=='available')update('Çeviri dil paketi hazırlanıyor…');
+        translatorPromise=Translator.create({sourceLanguage:'en',targetLanguage:'tr',monitor(m){
+          m.addEventListener('downloadprogress',e=>update(`Çeviri dil paketi indiriliyor: %${Math.round(e.loaded*100)}`));
+        }});
+      }
+      const translator=await translatorPromise;
+      if(request!==translationRequest)return;
+      update('Çevriliyor…');
+      const result=await translator.translate(text);
+      update(result);
+    }catch{
+      translatorPromise=null;
+      if(request!==translationRequest)return;
+      output.replaceChildren(document.createTextNode('Çeviri tamamlanamadı. '));
+      const retry=document.createElement('button');retry.textContent='Tekrar dene';retry.onclick=()=>{update('Çevriliyor…');translateSelection(text,request,output,rect);};output.append(retry);positionCard(rect);
+    }
+  }
   function show(text, rect) {
+    const request=++translationRequest;
     selected=text.slice(0,5000);card.replaceChildren();
     const title=document.createElement('div');title.className='title';title.textContent=selected;card.append(title);
+    const translation=document.createElement('div');translation.className='translation';
+    const translationLabel=document.createElement('div');translationLabel.className='translation-label';translationLabel.textContent='TÜRKÇE ÇEVİRİ';translation.append(translationLabel);
+    const translationText=document.createElement('div');translationText.className='translation-text';translationText.setAttribute('aria-live','polite');translationText.textContent='Çevriliyor…';translation.append(translationText);card.append(translation);
     const actions=document.createElement('div');actions.className='actions';card.append(actions);
     const add=(label,fn)=>{const b=document.createElement('button');b.textContent=label;b.onclick=()=>fn().catch(e=>{title.textContent=e.message;});actions.append(b);};
     add('Kelimeleri yönet',async()=>{await message({type:'pending',text:selected,url:location.href});hide();});
@@ -125,7 +160,7 @@
       actions.replaceChildren();if(result.undoId)add('Geri al',async()=>{await message({type:'undo',id:result.undoId});hide();});add('Kapat',async()=>hide());
     });
     else {const note=document.createElement('div');note.className='note';note.textContent=`${list.length} benzersiz kelime • Panelde seçerek ekle`;card.append(note);}
-    host.style.display='block';host.style.left=`${Math.max(8,Math.min(rect.left,innerWidth-350))}px`;host.style.top=`${Math.max(8,Math.min(rect.bottom+10,innerHeight-155))}px`;
+    host.style.display='block';positionCard(rect);translateSelection(selected,request,translationText,rect);
   }
   document.addEventListener('pointerup',e=>{
     if(e.composedPath().includes(host)||!settings.enabled||!settings.menu||settings.siteModes[location.hostname]==='off')return;

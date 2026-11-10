@@ -1,6 +1,6 @@
-# LingoLeaf 0.2.0
+# LingoLeaf 0.3.0
 
-İngilizce okurken kelime ve ifadelerini yönet. Türkçe arayüz, yerel kayıt ve renklendirme. **Çeviri bu sürümde ertelendi.**
+İngilizce okurken kelime ve ifadelerini yönet. Türkçe arayüz, yerel kayıt, renklendirme ve seçim kartında Türkçe çeviri.
 
 ## Önceki sürümü güncelle
 
@@ -22,11 +22,14 @@
 
 Masaüstü Chrome 120 veya daha yeni sürüm gerekir.
 
+Seçim kartındaki yerel çeviri için masaüstü Chrome 138 veya daha yeni sürüm gerekir. İlk çeviride Chrome İngilizce–Türkçe dil paketini indirebilir; kart indirme durumunu gösterir. Çeviri tarayıcıda yapılır, seçilen metin harici bir çeviri servisine gönderilmez.
+
 ## Okurken
 
 - İngilizce kelimelerin **metin rengi** değişir; alt çizgi yoktur.
 - Bilinmeyen: mor; öğreniyorum: sıcak ton; öğrendim: yeşil; biliyorum: özgün renk.
 - Kelime seçip durum düğmesine bas. Daha uzun metin seçip **Kelimeleri yönet** ile hangi kelimeleri ekleyeceğini belirle.
+- Metin seçildiğinde açılan kartta Türkçe çeviri otomatik görünür. Çeviri başarısız olursa karttan tekrar deneyebilirsin.
 - Sağ tık veya **Alt+Shift+L** ile panele geç. Kısayol çakışırsa `chrome://extensions/shortcuts` adresinden değiştir.
 - Aynı kelime tekrar eklenmez. Listeye kayıtlı kelimelerin mevcut durumu görünür.
 - Kaydettiğin çok kelimeli ifadeler aynı paragrafta, kelimeler inline öğelerle ayrılmış olsa da renklendirilir. Uzun ifade önceliklidir.
@@ -61,7 +64,7 @@ Günlük hedef, ilk kez öğrendiğin benzersiz kelimelerin 7/30/90 günlük gra
 
 ## Veri ve sınırlar
 
-Kelimeler, notlar, kaynak bağlantıları, durum değişiklikleri ve günlük toplam aktif okuma süreleri yalnızca bu Chrome profilinde tutulur. Sunucu, analitik ve çeviri isteği yoktur. Dil algılama Chrome'un yerel i18n API'si ile yapılır. Eklentinin sayfalara erişimi otomatik renklendirme içindir. Eklentiyi kaldırmak kayıtları siler.
+Kelimeler, notlar, kaynak bağlantıları, durum değişiklikleri ve günlük toplam aktif okuma süreleri yalnızca bu Chrome profilinde tutulur. Sunucu ve analitik isteği yoktur. Seçim çevirisi Chrome'un yerel Translator API'si, dil algılama yerel i18n API'si ile yapılır. Eklentinin sayfalara erişimi otomatik renklendirme ve seçim kartı içindir. Eklentiyi kaldırmak kayıtları siler.
 
 Chrome iç sayfaları, Web Store, yerleşik PDF, çerçeveler ve Shadow DOM metinleri kapsam dışı. Büyük sayfalarda kısmi tarama yapılabilir. Tarayıcı testleri ayrı Chrome oturumunda API taklitleriyle yürütüldü; gerçek yükleme izinleri ve tüm siteler için doğrulama tamamlanmış değildir.
 
