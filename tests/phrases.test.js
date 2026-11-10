@@ -3,7 +3,8 @@ const assert = require('node:assert/strict');
 require('../phrases.js');
 const Lingo = require('../core.js');
 
-const index = Lingo.candidateIndex(globalThis.LingoPhrases);
+require('../expressions.js');
+const index = Lingo.bundledIndex();
 const suggestions = (text, selected, saved = {}) => {
   const start = text.indexOf(selected);
   assert.notEqual(start, -1);
@@ -46,7 +47,7 @@ test('extracts phrases as whole terms without repeating their words', () => {
   assert.deepEqual(Lingo.terms('She gave it up and gave up.', index), ['she', 'give up', 'it', 'and']);
   assert.deepEqual(Lingo.terms('I give, up is a direction.', index), ['i', 'give', 'up', 'is', 'a', 'direction']);
   const [term] = Lingo.extractTerms('broke down', index);
-  assert.deepEqual(term, {word: 'break down', phrase: true, surface: 'broke down'});
+  assert.deepEqual(term, {word: 'break down', phrase: true, saved: false, surface: 'broke down'});
 });
 
 test('saved phrases are extracted and highlighted before bundled candidates', () => {
@@ -54,4 +55,18 @@ test('saved phrases are extracted and highlighted before bundled candidates', ()
   assert.deepEqual(Lingo.terms('We ran into him in spite of it.', index, saved), ['we', 'run into', 'him', 'in spite of', 'it']);
   const marked = Lingo.matchedTokens('She gave it up.', Lingo.phraseIndex(saved)).map(t => t.phraseStatus || null);
   assert.deepEqual(marked, [null, 'learned', null, 'learned']);
+});
+
+test('extracts fixed expressions only in their exact form', () => {
+  assert.deepEqual(Lingo.terms('In spite of the rain, we went out as well as they did.', index), ['in spite of', 'the', 'rain', 'we', 'go out', 'as well as', 'they', 'did']);
+  assert.deepEqual(Lingo.terms('The inning of spite.', index), ['the', 'inning', 'of', 'spite']);
+  assert.deepEqual(Lingo.terms('She gave up a lot of time.', index), ['she', 'give up', 'a lot of', 'time']);
+});
+
+test('split candidate phrases fall back to words, saved ones stay whole', () => {
+  const saved = {'look up': {word: 'look up', status: 'learning'}};
+  assert.deepEqual(Lingo.terms('I looked up the street.', index, {}, new Set(['look up'])), ['i', 'looked', 'up', 'the', 'street']);
+  assert.deepEqual(Lingo.terms('I looked up the street.', index, saved, new Set(['look up'])), ['i', 'look up', 'the', 'street']);
+  assert.equal(Lingo.extractTerms('look up', index, saved)[0].saved, true);
+  assert.equal(Lingo.extractTerms('look up', index)[0].saved, false);
 });

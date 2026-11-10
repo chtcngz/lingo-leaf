@@ -4,7 +4,7 @@
   let words = {}, settings = Lingo.settings(), generation = 0, timer, pageEnglish = false, pageStats = null;
   const blockSelector='p,li,blockquote,h1,h2,h3,h4,h5,h6,td,th,figcaption,div,article,section';
   const blockVerdicts=new WeakMap(),languageCache=new Map();let lastInteraction=Date.now();
-  const candidatePhrases=Lingo.candidateIndex(globalThis.LingoPhrases||[]);
+  const candidatePhrases=Lingo.bundledIndex();
   const names = new Set(); const sheet = new CSSStyleSheet();
   document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet];
   const excluded = 'script,style,noscript,textarea,input,select,option,code,pre,svg,math,[contenteditable]:not([contenteditable="false"]),[translate="no"],[data-lingoleaf],button';

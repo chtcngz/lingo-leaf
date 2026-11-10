@@ -1,4 +1,4 @@
-# LingoLeaf 0.4.0
+# LingoLeaf 0.5.0
 
 İngilizce okurken kelime ve ifadelerini yönet. Türkçe arayüz, yerel kayıt, renklendirme ve seçim kartında Türkçe çeviri.
 
@@ -33,6 +33,8 @@ Seçim kartındaki yerel çeviri için masaüstü Chrome 138 veya daha yeni sür
 - Tek kelime seçtiğinde geçtiği cümlenin Türkçe çevirisi de gösterilir. Bu çeviri kelimenin bağlamını anlamaya yardım eder; ayrı bir sözlük anlamı değildir.
 - `give up` gibi fiil öbekleri seçimin çevresinde aranır. `gave up` ve `gave it up` gibi biçimler önerilebilir; öbeği **Öğreniyorum olarak ekle** ile kendin kaydedersin. Öneriler yanılabilir.
 - Öbeğin tamamını seçtiğinde (`broke down`, `gave it up`) kart, panel ve sağ tık menüsü onu tek öğe olarak temel biçimiyle (`break down`, `give up`) çıkarır; öbeğin kelimeleri ayrıca listelenmez. Kayıtlı öbekler paket adaylarından önce gelir.
+- `in spite of`, `as well as`, `of course` gibi kalıp ifadeler de yalnızca bu yazılışlarıyla tek öğe olarak çıkarılır.
+- Panelde yanlış birleşen bir öbeği (ör. `looked up the street` içindeki `look up`) **böl** ile ayrı kelimelere ayırabilirsin. Kayıtlı öbekler bölünmez.
 - Sağ tık veya **Alt+Shift+L** ile panele geç. Kısayol çakışırsa `chrome://extensions/shortcuts` adresinden değiştir.
 - Aynı kelime tekrar eklenmez. Listeye kayıtlı kelimelerin mevcut durumu görünür.
 - Kaydettiğin çok kelimeli ifadeler aynı paragrafta, kelimeler inline öğelerle ayrılmış olsa da renklendirilir. Uzun ifade önceliklidir.
@@ -67,7 +69,7 @@ Günlük hedef, ilk kez öğrendiğin benzersiz kelimelerin 7/30/90 günlük gra
 
 ## Veri ve sınırlar
 
-Kelimeler, notlar, kaynak bağlantıları, durum değişiklikleri ve günlük toplam aktif okuma süreleri yalnızca bu Chrome profilinde tutulur. Sunucu ve analitik isteği yoktur. Seçim, cümle ve öbek çevirisi Chrome'un yerel Translator API'si, dil algılama yerel i18n API'si ile yapılır. Çeviriler en fazla 100 metin için geçici bellek önbelleğinde tutulur; sayfa yenilenince silinir. Öbek adayları eklentiyle gelen [Open English WordNet](PHRASE-DATA.md) verisinden bulunur. Eklentinin sayfalara erişimi otomatik renklendirme ve seçim kartı içindir. Eklentiyi kaldırmak kayıtları siler.
+Kelimeler, notlar, kaynak bağlantıları, durum değişiklikleri ve günlük toplam aktif okuma süreleri yalnızca bu Chrome profilinde tutulur. Sunucu ve analitik isteği yoktur. Seçim, cümle ve öbek çevirisi Chrome'un yerel Translator API'si, dil algılama yerel i18n API'si ile yapılır. Çeviriler en fazla 100 metin için geçici bellek önbelleğinde tutulur; sayfa yenilenince silinir. Öbek adayları eklentiyle gelen [Open English WordNet](PHRASE-DATA.md) verisinden ve proje içinde hazırlanan kalıp ifade listesinden bulunur. Eklentinin sayfalara erişimi otomatik renklendirme ve seçim kartı içindir. Eklentiyi kaldırmak kayıtları siler.
 
 Chrome iç sayfaları, Web Store, yerleşik PDF, çerçeveler ve Shadow DOM metinleri kapsam dışı. Büyük sayfalarda kısmi tarama yapılabilir. Tarayıcı testleri ayrı Chrome oturumunda API taklitleriyle yürütüldü; gerçek yükleme izinleri ve tüm siteler için doğrulama tamamlanmış değildir.
 

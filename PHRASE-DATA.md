@@ -4,6 +4,8 @@
 
 Liste yalnızca öbek **adayı** bulur. İngilizce anlamları veya Türkçe çevirileri içermez. Fiil dışı ifadeler, dört kelimeden uzun ifadeler ve ikinci sözcüğü yaygın bir parçacık/edat olmayan ifadeler dışlanır. Bazı adaylar cümlede düz anlamda kullanılabilir; bu nedenle otomatik kaydedilmez.
 
+`expressions.js` içindeki kalıp ifadeler (`in spite of`, `as well as` vb.) proje için elle hazırlanmıştır; WordNet'ten gelmez ve yalnızca yazıldığı biçimle eşleşir.
+
 Yeniden üretim:
 
 ```text

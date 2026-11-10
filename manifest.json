@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "LingoLeaf — Okurken İngilizce",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "İngilizce okurken kelimelerini tanı, öğren ve gelişimini takip et.",
   "minimum_chrome_version": "120",
   "icons": {"16": "icons/icon16.png", "48": "icons/icon48.png", "128": "icons/icon128.png"},
@@ -10,7 +10,7 @@
   "action": {"default_title": "LingoLeaf'i aç"},
   "side_panel": {"default_path": "panel.html"},
   "options_page": "panel.html",
-  "content_scripts": [{"matches": ["http://*/*", "https://*/*"], "js": ["phrases.js", "core.js", "content.js"], "css": ["highlights.css"], "run_at": "document_idle"}],
+  "content_scripts": [{"matches": ["http://*/*", "https://*/*"], "js": ["phrases.js", "expressions.js", "core.js", "content.js"], "css": ["highlights.css"], "run_at": "document_idle"}],
   "commands": {"open-panel": {"suggested_key": {"default": "Alt+Shift+L"}, "description": "Seçimi LingoLeaf panelinde aç"}},
   "content_security_policy": {"extension_pages": "script-src 'self'; object-src 'self'"}
 }

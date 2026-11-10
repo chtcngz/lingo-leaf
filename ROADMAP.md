@@ -1,6 +1,6 @@
 # LingoLeaf — Yol haritası
 
-Güncelleme: 10 Kasım 2026 · Sürüm: 0.4.0
+Güncelleme: 10 Kasım 2026 · Sürüm: 0.5.0
 
 ## Kapsam
 
@@ -57,8 +57,16 @@ Güncelleme: 10 Kasım 2026 · Sürüm: 0.4.0
 - [x] Tek kelime seçiminde çevre cümlenin çevirisini ayrı gösterme.
 - [x] Yerel WordNet adaylarından fiil öbeklerini çekimli ve ayrık biçimlerde önerme.
 - [x] Öbeği kullanıcı onayıyla öğreniyorum listesine ekleme.
-- [x] Seçimde, panelde ve sağ tık menüsünde öbekleri tek öğe olarak çıkarma; düzensiz fiiller ve ünsüz ikilenmesi.
 - [x] Tekrarlanan seçimler için sayfa belleğinde çeviri önbelleği.
+
+## 0.5.0 öbek çıkarımı
+
+- [x] Seçimde, panelde ve sağ tık menüsünde öbekleri temel biçimiyle tek öğe olarak çıkarma.
+- [x] Düzensiz fiiller ve ünsüz ikilenmesi (`broke down`, `dropped off`).
+- [x] Kayıtlı öbekleri ayrık biçimde de renklendirme (`gave it up`).
+- [x] `in spite of`, `as well as` gibi kalıp ifadeler.
+- [x] Paneldeki yanlış öbek adayını kelimelere bölme.
+- [ ] Gerçek Chrome eklentisinde öbek kartı ve panel akışının doğrulanması.
 
 ## Sonraki çeviri geliştirmeleri
 

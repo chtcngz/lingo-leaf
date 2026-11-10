@@ -41,15 +41,16 @@
     const ing=base.endsWith('ie')?`${base.slice(0,-2)}ying`:base.endsWith('e')&&base.length>2&&!/(?:ee|ye|oe)$/.test(base)?`${base.slice(0,-1)}ing`:`${stem}ing`;
     return new Set([base,third,ing,...(irregularVerbs[base]||[past])]);
   }
-  // Entries are phrase strings or saved rows ({word,status}); every inflected form of the first word points at the phrase.
+  // Entries are phrase strings or rows ({word,status,fixed}); every inflected form of the first word points at the phrase unless it is fixed.
   function candidateIndex(phrases){
     const index=new Map();
-    for(const entry of phrases){const word=typeof entry==='string'?entry:entry.word,parts=word.split(' ');if(parts.length<2)continue;
-      for(const form of verbForms(parts[0])){if(!index.has(form))index.set(form,[]);index.get(form).push({word,parts,status:entry.status});}
+    for(const entry of phrases){const row=typeof entry==='string'?{word:entry}:entry,word=row.word,parts=word.split(' ');if(parts.length<2)continue;
+      for(const form of row.fixed?[parts[0]]:verbForms(parts[0])){if(!index.has(form))index.set(form,[]);index.get(form).push({word,parts,status:row.status,fixed:row.fixed===true});}
     }
     for(const candidates of index.values())candidates.sort((a,b)=>b.parts.length-a.parts.length);
     return index;
   }
+  function bundledIndex(){return candidateIndex([...(globalThis.LingoPhrases||[]),...(globalThis.LingoExpressions||[]).map(word=>({word,fixed:true}))]);}
   function phraseIndex(words){return candidateIndex(Object.values(words).filter(row=>row.word.includes(' ')));}
   const objectPronouns=new Set(['it','them','him','her','me','us','you','anyone','someone','everyone','nobody','somebody','something','nothing']);
   const determiners=new Set(['a','an','the','this','that','these','those','my','our','your','his','her','their','some','any']);
@@ -60,7 +61,7 @@
       const parts=[i];let valid=true;
       for(let j=1;j<candidate.parts.length&&valid;j++){
         const last=parts.at(-1),next=last+1;
-        if(j===1&&candidate.parts.length===2){
+        if(j===1&&candidate.parts.length===2&&!candidate.fixed){
           let separated=false;
           for(let gap=1;gap<=3;gap++){
             const particle=next+gap,middle=list.slice(next,particle).map(token=>token.word);
@@ -80,16 +81,17 @@
   function claim(matches,used,take){for(const match of matches.sort(byPriority)){if(match.tokens.some(t=>used.has(t)))continue;match.tokens.forEach(t=>used.add(t));take(match);}}
   function matchedTokens(text,index){const list=tokens(text);claim(phraseMatches(text,index,list),new Set(),match=>{for(const t of match.tokens)list[t].phraseStatus=match.status;});return list;}
   // Unique terms in reading order; saved phrases win over bundled candidates, and words inside a phrase are not listed again.
-  function extractTerms(text,candidates,saved={}){
+  // Candidate phrases named in exclude (split by the user) fall back to separate words.
+  function extractTerms(text,candidates,saved={},exclude=new Set()){
     const list=tokens(text),used=new Set(),found=[];
-    const take=match=>found.push({word:match.word,phrase:true,surface:text.slice(match.start,match.end),at:match.tokens[0]});
+    const take=match=>found.push({word:match.word,phrase:true,saved:Object.hasOwn(saved,match.word),surface:text.slice(match.start,match.end),at:match.tokens[0]});
     claim(phraseMatches(text,phraseIndex(saved),list),used,take);
-    if(candidates)claim(phraseMatches(text,candidates,list),used,take);
+    if(candidates)claim(phraseMatches(text,candidates,list).filter(match=>!exclude.has(match.word)),used,take);
     list.forEach((token,i)=>{if(!used.has(i))found.push({word:token.word,phrase:false,surface:text.slice(token.start,token.start+token.length),at:i});});
     const seen=new Set();
     return found.sort((a,b)=>a.at-b.at).filter(term=>!seen.has(term.word)&&seen.add(term.word)).map(({at,...term})=>term);
   }
-  function terms(text,candidates,saved){return extractTerms(text,candidates,saved).map(term=>term.word);}
+  function terms(text,candidates,saved,exclude){return extractTerms(text,candidates,saved,exclude).map(term=>term.word);}
   function phraseSuggestions(text,start,end,index,saved={}){
     const matches=phraseMatches(text,index).filter(match=>!Object.hasOwn(saved,match.word)&&match.start<end&&match.end>start)
       .map(match=>({word:match.word,surface:text.slice(match.start,match.end),start:match.start,end:match.end}));
@@ -108,6 +110,6 @@
   }
   function streak(days,now=new Date()){const active=new Set(days);let d=new Date(now),count=0;if(!active.has(day(d)))d.setDate(d.getDate()-1);while(active.has(day(d))){count++;d.setDate(d.getDate()-1);}return count;}
   function parseCSV(text){const first=text.split(/\r?\n/,1)[0],delimiter=(first.match(/;/g)||[]).length>(first.match(/,/g)||[]).length?';':',';const rows=[];let row=[],field='',quoted=false;for(let i=0;i<text.length;i++){const c=text[i];if(c==='"'){if(quoted&&text[i+1]==='"'){field+='"';i++;}else quoted=!quoted;}else if(!quoted&&(c===delimiter||c==='\n'||c==='\r')){row.push(field);field='';if(c==='\n'||c==='\r'){if(c==='\r'&&text[i+1]==='\n')i++;if(row.some(Boolean))rows.push(row);row=[];}}else field+=c;}if(quoted)throw Error('CSV içinde kapanmamış tırnak var.');row.push(field);if(row.some(Boolean))rows.push(row);return rows;}
-  globalThis.Lingo = {statuses, labels, defaults, normalize, tokens, unique, validKey, settings, day, englishHint, phraseIndex, matchedTokens, candidateIndex, extractTerms, terms, phraseSuggestions, sentenceContext, streak, parseCSV};
+  globalThis.Lingo = {statuses, labels, defaults, normalize, tokens, unique, validKey, settings, day, englishHint, phraseIndex, matchedTokens, candidateIndex, bundledIndex, extractTerms, terms, phraseSuggestions, sentenceContext, streak, parseCSV};
   if (typeof module !== 'undefined') module.exports = globalThis.Lingo;
 })();

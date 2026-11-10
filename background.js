@@ -1,5 +1,5 @@
-importScripts('phrases.js','core.js');
-const candidatePhrases=Lingo.candidateIndex(globalThis.LingoPhrases);
+importScripts('phrases.js','expressions.js','core.js');
+const candidatePhrases=Lingo.bundledIndex();
 let queue=Promise.resolve();
 const enqueue=fn=>{const result=queue.then(fn);queue=result.catch(()=>{});return result;};
 chrome.sidePanel.setPanelBehavior({openPanelOnActionClick:true}).catch(()=>{});
