@@ -17,12 +17,15 @@ chrome.commands.onCommand.addListener((command,tab)=>{
   chrome.tabs.sendMessage(tab.id,{type:'selection'}).then(r=>pending(r?.text,{...tab,url:r?.url||tab.url})).catch(()=>pending('',tab));
 });
 const cleanDate=value=>typeof value==='string'&&Number.isFinite(Date.parse(value))?new Date(value).toISOString():null;
+const cleanTranslation=value=>String(value||'').replace(/\s+/g,' ').trim().slice(0,500);
+// Undo ignores translations: they are filled in later in the background and must not block undoing a status change.
+const bare=row=>row&&JSON.stringify({...row,translation:undefined});
 const safeURL=value=>{try{const url=new URL(value);return ['http:','https:'].includes(url.protocol)?url.href.slice(0,2048):'';}catch{return '';}};
 function cleanRow(row){
   if(!row||typeof row.word!=='string')return null;const word=Lingo.normalize(row.word);
   if(!Lingo.validKey(word)||!Lingo.statuses.includes(row.status))return null;
   const now=new Date().toISOString();
-  return {word,status:row.status,createdAt:cleanDate(row.createdAt)||now,updatedAt:cleanDate(row.updatedAt)||now,learnedAt:cleanDate(row.learnedAt),url:safeURL(row.url),example:String(row.example||'').slice(0,1000),note:String(row.note||'').slice(0,2000)};
+  return {word,status:row.status,createdAt:cleanDate(row.createdAt)||now,updatedAt:cleanDate(row.updatedAt)||now,learnedAt:cleanDate(row.learnedAt),url:safeURL(row.url),example:String(row.example||'').slice(0,1000),note:String(row.note||'').slice(0,2000),translation:cleanTranslation(row.translation)};
 }
 async function commit(data,words,events,before){
   const id=crypto.randomUUID(),undo=data.undo||{};const after={};
@@ -40,7 +43,7 @@ async function change(msg){
     before[word]=old;
     if(msg.status==='remove'){delete words[word];continue;}
     const now=new Date().toISOString();
-    words[word]={word,status:msg.status,createdAt:old?.createdAt||now,updatedAt:now,learnedAt:old?.learnedAt||(msg.status==='learned'?now:null),url:old?.url||safeURL(msg.url),example:old?.example||String(msg.example||'').slice(0,1000),note:old?.note||''};
+    words[word]={word,status:msg.status,createdAt:old?.createdAt||now,updatedAt:now,learnedAt:old?.learnedAt||(msg.status==='learned'?now:null),url:old?.url||safeURL(msg.url),example:old?.example||String(msg.example||'').slice(0,1000),note:old?.note||'',translation:old?.translation||''};
     events.push({word,from:old?.status||'unknown',to:msg.status,at:now});
   }
   if(!Object.keys(before).length)return {count:0};return commit(data,words,events,before);
@@ -53,14 +56,21 @@ chrome.runtime.onMessage.addListener((msg,sender,respond)=>{
       const words=data.words||{};let count=0;
       for(const [key,expected] of Object.entries(tx.after)){
         const current=Object.hasOwn(words,key)?words[key]:null;
-        if(JSON.stringify(current)!==JSON.stringify(expected))continue;
-        if(tx.before[key])words[key]=tx.before[key];else delete words[key];count++;
+        if(bare(current)!==bare(expected))continue;
+        if(tx.before[key])words[key]={...tx.before[key],translation:tx.before[key].translation||current?.translation||''};else delete words[key];count++;
       }
       delete data.undo[msg.id];await chrome.storage.local.set({words,undo:data.undo});return {count,skipped:Object.keys(tx.before).length-count};
     });
     if(msg.type==='detail')return enqueue(async()=>{
       const data=await chrome.storage.local.get(['words','events','undo']);const words=data.words||{};if(!Object.hasOwn(words,msg.word))throw Error('Kelime bulunamadı.');
-      const before={[msg.word]:words[msg.word]};words[msg.word]={...words[msg.word],note:String(msg.note||'').slice(0,2000),example:String(msg.example||'').slice(0,1000),updatedAt:new Date().toISOString()};return commit(data,words,data.events||[],before);
+      const before={[msg.word]:words[msg.word]};words[msg.word]={...words[msg.word],note:String(msg.note||'').slice(0,2000),example:String(msg.example||'').slice(0,1000),...(typeof msg.translation==='string'?{translation:cleanTranslation(msg.translation)}:{}),updatedAt:new Date().toISOString()};return commit(data,words,data.events||[],before);
+    });
+    // Automatic translations only fill empty fields; they are not undo steps and do not change updatedAt.
+    if(msg.type==='translations')return enqueue(async()=>{
+      if(!msg.map||typeof msg.map!=='object')throw Error('Çeviri listesi gerekli.');
+      const data=await chrome.storage.local.get('words');const words=data.words||{};let count=0;
+      for(const [word,text] of Object.entries(msg.map).slice(0,500)){const value=cleanTranslation(text);if(!value||!Object.hasOwn(words,word)||words[word].translation)continue;words[word]={...words[word],translation:value};count++;}
+      if(count)await chrome.storage.local.set({words});return {count};
     });
     if(msg.type==='settings')return enqueue(async()=>{const data=await chrome.storage.local.get('settings'),old=data.settings||{};const value=Lingo.settings({...old,...msg.patch,colors:{...old.colors,...msg.patch?.colors},siteModes:{...old.siteModes,...msg.patch?.siteModes}});await chrome.storage.local.set({settings:value});return value;});
     if(msg.type==='pending'){

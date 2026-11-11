@@ -1,6 +1,6 @@
 # LingoLeaf — Yol haritası
 
-Güncelleme: 10 Kasım 2026 · Sürüm: 0.7.0
+Güncelleme: 11 Kasım 2026 · Sürüm: 0.8.0
 
 ## Kapsam
 
@@ -87,6 +87,15 @@ Güncelleme: 10 Kasım 2026 · Sürüm: 0.7.0
 - [x] Cümle başı ve Başlık Biçimi için sayfa genelindeki kanıta bakma; kısaltmaları ad sayma.
 - [x] Panelde Özel adlar grubu ve ayarlarda kapatma anahtarı.
 - [ ] Başka yerde geçmeyen cümle başı adları (ör. tek kez geçen `Likud`) için sözlük tabanlı ayrım.
+
+## 0.8.0 panelde çeviri ve sayfada bulma
+
+- [x] Kelime kaydında Türkçe karşılık; karttan kaydederken saklama, eksikleri panelde yerel çeviriyle tamamlama (#2).
+- [x] Karşılığı ayrıntıdan düzenleme; Türkçe karşılıkla arama; CSV dışa/içe aktarmada `translation`/`çeviri` sütunu.
+- [x] Sonradan eklenen çeviri geri almayı engellemez; yalnızca çeviri değişince sayfa yeniden taranmaz.
+- [x] Paneldeki kelimenin üstüne gelince sayfadaki tüm geçişlerini vurgulama; tıklayınca sırayla kaydırma (#3).
+- [ ] Gerçek Chrome eklentisinde yan panelden Translator API ve dil paketi indirme düğmesinin doğrulanması.
+- [ ] Chrome hesapları arası kelime senkronu (`chrome.storage.sync`) (#1).
 
 ## Sonraki çeviri geliştirmeleri
 

@@ -79,7 +79,7 @@
   }
   const byPriority=(a,b)=>b.tokens.length-a.tokens.length||(a.end-a.start)-(b.end-b.start)||a.start-b.start;
   function claim(matches,used,take){for(const match of matches.sort(byPriority)){if(match.tokens.some(t=>used.has(t)))continue;match.tokens.forEach(t=>used.add(t));take(match);}}
-  function matchedTokens(text,index){const list=tokens(text);claim(phraseMatches(text,index,list),new Set(),match=>{for(const t of match.tokens)list[t].phraseStatus=match.status;});return list;}
+  function matchedTokens(text,index){const list=tokens(text);claim(phraseMatches(text,index,list),new Set(),match=>{for(const t of match.tokens){list[t].phraseStatus=match.status;list[t].phraseWord=match.word;list[t].phraseTokens=match.tokens;}});return list;}
   // Proper names (people, places, organisations) are left uncolored. A capital letter inside a sentence marks a name;
   // a capital at a sentence start or in a Title Case heading is ambiguous and counts as a name only when the same word
   // appears elsewhere as a name and never in lower case. Short all-caps words are acronyms (NATO, UK).

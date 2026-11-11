@@ -1,12 +1,14 @@
 (() => {
   if (globalThis.__lingoleaf) return;
   globalThis.__lingoleaf = true;
-  let words = {}, settings = Lingo.settings(), generation = 0, timer, pageEnglish = false, pageStats = null;
+  let words = {}, settings = Lingo.settings(), generation = 0, timer, pageEnglish = false, pageStats = null, occurrences = new Map(), focus = {word:'',index:-1};
   const blockSelector='p,li,blockquote,h1,h2,h3,h4,h5,h6,td,th,figcaption,div,article,section';
   const blockVerdicts=new WeakMap(),languageCache=new Map();let lastInteraction=Date.now();
   const candidatePhrases=Lingo.bundledIndex();
   const names = new Set(); const sheet = new CSSStyleSheet();
-  document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet];
+  const focusSheet = new CSSStyleSheet();
+  focusSheet.replaceSync('::highlight(lingoleaf-focus){background-color:#ffe17a;color:#1b1b1b}::highlight(lingoleaf-focus-current){background-color:#ff9f43;color:#111}');
+  document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet, focusSheet];
   const excluded = 'script,style,noscript,textarea,input,select,option,code,pre,svg,math,[contenteditable]:not([contenteditable="false"]),[translate="no"],[data-lingoleaf],button';
   function textBlock(el){const natural=el.closest(blockSelector)||document.body,tagged=el.closest('[lang]');return tagged&&tagged!==document.documentElement&&natural.contains(tagged)?tagged:natural;}
   const message = async value => {const r=await chrome.runtime.sendMessage(value);if(!r?.ok)throw Error(r?.error||'Sayfayı yenileyin.');return r.result;};
@@ -60,9 +62,41 @@
     try{const r=await message({type:'detect',text});const first=r.languages?.[0];english=r.isReliable&&first?.percentage>=65?first.language==='en':fallback();}catch{english=fallback();}
     if(languageCache.size>=300)languageCache.delete(languageCache.keys().next().value);languageCache.set(text,english);return english;
   }
+  // The text-node pieces a token covers; a token can span inline elements.
+  function pieces(segments,start,length,from=0){
+    const out=[];
+    for(let i=from;i<segments.length;i++){
+      const seg=segments[i],a=Math.max(start,seg.start),b=Math.min(start+length,seg.start+seg.node.length);
+      if(seg.start>=start+length)break;if(b>a)out.push({seg,start:a-seg.start,end:b-seg.start});
+    }
+    return out;
+  }
+  function range(piece){const r=new Range();r.setStart(piece.seg.node,piece.start);r.setEnd(piece.seg.node,piece.end);return r;}
+  // Panel hover and click: mark every occurrence of a saved word and step through them.
+  function clearFocus(){CSS.highlights?.delete('lingoleaf-focus');CSS.highlights?.delete('lingoleaf-focus-current');}
+  function occurrenceRanges(word){
+    const list=[];
+    for(const hit of occurrences.get(word)||[]){
+      const parts=hit.tokens.flatMap(token=>pieces(hit.segments,token.start,token.length)).filter(p=>p.seg.node.isConnected).map(range);
+      if(parts.length)list.push(parts);
+    }
+    return list;
+  }
+  function showFocus(word,step){
+    clearFocus();if(!CSS.highlights||!globalThis.Highlight)return {count:0};
+    const list=occurrenceRanges(word);if(!list.length){focus={word:'',index:-1};return {count:0};}
+    if(focus.word!==word)focus={word,index:-1};
+    const all=new Highlight(...list.flat());all.priority=1;CSS.highlights.set('lingoleaf-focus',all);
+    if(!step)return {count:list.length,index:focus.index};
+    focus.index=(focus.index+1)%list.length;
+    const current=new Highlight(...list[focus.index]);current.priority=2;CSS.highlights.set('lingoleaf-focus-current',current);
+    const rect=list[focus.index][0].getBoundingClientRect();
+    if(rect.top<80||rect.bottom>innerHeight-80)scrollBy({top:rect.top-innerHeight/2,behavior:'smooth'});
+    return {count:list.length,index:focus.index};
+  }
   function schedule() { clearTimeout(timer); generation++; timer=setTimeout(scan,350); }
   async function scan() {
-    const id=++generation; clear(); pageStats=null;
+    const id=++generation; clear(); pageStats=null; const found=new Map();
     if (!settings.enabled || settings.siteModes[location.hostname]==='off' || !CSS.highlights || !globalThis.Highlight) return;
     const walker=document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
     const groups=new Map(), blocks=new Map(),seen=new Set(), known=new Set(); let node, processed=0, limited=false;
@@ -90,19 +124,22 @@
     }
     // Names are judged across the whole page so a sentence-initial "Netanyahu" is caught by its other mentions.
     const nameSets=settings.names?Lingo.nameTokens(english):english.map(()=>new Set());
+    const note=(word,hit)=>{if(!found.has(word))found.set(word,[]);found.get(word).push(hit);};
     for(const [b,item] of english.entries()){
       let segmentIndex=0;
       for(const [t,token] of item.tokens.entries()){
+        note(token.word,{segments:item.segments,tokens:[token]});
+        // A separated phrase (gave it up) is one occurrence made of its own tokens only.
+        if(token.phraseTokens?.[0]===t)note(token.phraseWord,{segments:item.segments,tokens:token.phraseTokens.map(i=>item.tokens[i])});
         if(nameSets[b].has(t)&&!token.phraseStatus&&!Object.hasOwn(words,token.word))continue;
         seen.add(token.word);const status=token.phraseStatus||words[token.word]?.status||'unknown';
         if(status==='known'||status==='learned')known.add(token.word);
         if(status==='known')continue;
         while(segmentIndex+1<item.segments.length&&item.segments[segmentIndex+1].start<=token.start)segmentIndex++;
-        for(let i=segmentIndex;i<item.segments.length;i++){
-          const seg=item.segments[i],start=Math.max(token.start,seg.start),end=Math.min(token.start+token.length,seg.start+seg.node.length);
-          if(seg.start>=token.start+token.length)break;if(end<=start||seg.info.complex)continue;
-          const style=highlightStyle(status,seg.info),key=`${status}|${style.color}|${style.background}`;
-          if(!groups.has(key))groups.set(key,{...style,ranges:[]});const range=new Range();range.setStart(seg.node,start-seg.start);range.setEnd(seg.node,end-seg.start);groups.get(key).ranges.push(range);
+        for(const piece of pieces(item.segments,token.start,token.length,segmentIndex)){
+          if(piece.seg.info.complex)continue;
+          const style=highlightStyle(status,piece.seg.info),key=`${status}|${style.color}|${style.background}`;
+          if(!groups.has(key))groups.set(key,{...style,ranges:[]});groups.get(key).ranges.push(range(piece));
         }
       }
     }
@@ -112,7 +149,7 @@
       const name=`lingoleaf-${index++}`; const highlight=new Highlight();for(const r of group.ranges)highlight.add(r);
       CSS.highlights.set(name,highlight); names.add(name); rules.push(`::highlight(${name}) { color: ${group.color};${group.background?` background-color: ${group.background};`:''} }`);
     }
-    sheet.replaceSync(rules.join('\n'));
+    sheet.replaceSync(rules.join('\n'));occurrences=found;if(focus.word&&CSS.highlights.has('lingoleaf-focus'))showFocus(focus.word,false);
     pageStats={total:seen.size,known:known.size,limited,english:seen.size>0,host:location.hostname};
   }
   async function identify() {
@@ -128,6 +165,14 @@
   shadow.append(style);const card=document.createElement('div');card.className='card';shadow.append(card);document.documentElement.append(host);
   let selected='',translationRequest=0,translatorPromise=null,translatorState=null;
   const translationCache=new Map();
+  // Saved words get their own Turkish meaning (not the sentence's) for the panel; only empty fields are filled.
+  async function rememberTranslation(word){
+    try{
+      let text=translationCache.get(word);
+      if(!text){if(!translatorPromise)return;const translator=await translatorPromise;text=await translator.translate(word);translationCache.set(word,text);}
+      if(text)await message({type:'translations',map:{[word]:text}});
+    }catch{}
+  }
   function hide(){translationRequest++;host.style.display='none';}
   function positionCard(rect){
     const width=card.getBoundingClientRect().width,height=card.getBoundingClientRect().height;
@@ -184,7 +229,7 @@
         const form=document.createElement('div');form.className='phrase-form';form.textContent=suggestion.surface===suggestion.word?suggestion.word:`${suggestion.surface} → ${suggestion.word}`;row.append(form);
         const meaning=document.createElement('div');meaning.className='phrase-meaning';meaning.setAttribute('aria-live','polite');meaning.textContent='Çevriliyor…';row.append(meaning);
         const save=document.createElement('button');save.textContent='Öğreniyorum olarak ekle';save.onclick=async()=>{
-          try{save.disabled=true;const result=await message({type:'change',words:[suggestion.word],status:'learning',example:details.sentence||selected});save.textContent=result.count?'Eklendi':'Zaten kayıtlı';}
+          try{save.disabled=true;const result=await message({type:'change',words:[suggestion.word],status:'learning',example:details.sentence||selected});save.textContent=result.count?'Eklendi':'Zaten kayıtlı';if(result.count)rememberTranslation(suggestion.word);}
           catch(e){save.disabled=false;meaning.textContent=e.message;}
         };row.append(save);section.append(row);phraseOutputs.push({text:suggestion.surface,output:meaning});
       }
@@ -203,7 +248,7 @@
     add('Kelimeleri yönet',async()=>{await message({type:'pending',text:selected,url:location.href});hide();});
     if(list.length===1)for(const status of Lingo.statuses)add(Lingo.labels[status],async()=>{
       const word=single.word;
-      const result=await message({type:'change',words:[word],status,example:getSelection()?.anchorNode?.parentElement?.closest(blockSelector)?.textContent?.slice(0,1000)||selected});title.textContent=result.count?`${Lingo.labels[status]} olarak kaydedildi`:single.phrase?'Bu öbek zaten bu durumda':'Bu kelime zaten bu durumda';
+      const result=await message({type:'change',words:[word],status,example:getSelection()?.anchorNode?.parentElement?.closest(blockSelector)?.textContent?.slice(0,1000)||selected});if(result.count)rememberTranslation(word);title.textContent=result.count?`${Lingo.labels[status]} olarak kaydedildi`:single.phrase?'Bu öbek zaten bu durumda':'Bu kelime zaten bu durumda';
       actions.replaceChildren();if(result.undoId)add('Geri al',async()=>{await message({type:'undo',id:result.undoId});hide();});add('Kapat',async()=>hide());
     });
     else {const note=document.createElement('div');note.className='note';const phraseCount=terms.filter(term=>term.phrase).length;note.textContent=`${list.length} benzersiz ${phraseCount?`öğe (${phraseCount} öbek)`:'kelime'} • Panelde seçerek ekle`;card.append(note);}
@@ -225,8 +270,15 @@
   document.addEventListener('keydown',e=>{if(e.key==='Escape')hide();});
   document.addEventListener('pointerdown',e=>{if(!e.composedPath().includes(host))hide();});
   addEventListener('scroll',hide,{passive:true});
-  chrome.runtime.onMessage.addListener((msg,sender,reply)=>{if(msg.type==='selection')reply({text:getSelection()?.toString()||'',url:location.href});if(msg.type==='pageStats')reply(pageStats||{english:false,host:location.hostname});});
-  chrome.storage.onChanged.addListener((changes,area)=>{if(area!=='local')return;if(changes.words)words=changes.words.newValue||{};if(changes.settings)settings=Lingo.settings(changes.settings.newValue);if(changes.words||changes.settings){hide();schedule();}});
+  chrome.runtime.onMessage.addListener((msg,sender,reply)=>{if(msg.type==='selection')reply({text:getSelection()?.toString()||'',url:location.href});if(msg.type==='pageStats')reply(pageStats||{english:false,host:location.hostname});
+    if(msg.type==='occurrences')reply(Object.fromEntries(Object.keys(words).map(word=>[word,occurrences.get(word)?.length||0]).filter(([,count])=>count)));
+    if(msg.type==='focus')reply(showFocus(String(msg.word||''),msg.step===true));
+    if(msg.type==='blur'){clearFocus();if(!msg.keep)focus={word:'',index:-1};reply({});}});
+  const statusKey=rows=>Object.values(rows||{}).map(row=>`${row.word}:${row.status}`).sort().join('|');
+  chrome.storage.onChanged.addListener((changes,area)=>{if(area!=='local')return;
+    // Translation-only writes do not change colours, so the page and an open card are left alone.
+    const recolor=changes.settings||(changes.words&&statusKey(changes.words.newValue)!==statusKey(changes.words.oldValue));
+    if(changes.words)words=changes.words.newValue||{};if(changes.settings)settings=Lingo.settings(changes.settings.newValue);if(recolor){hide();schedule();}});
   const observer=new MutationObserver(records=>{if(records.some(r=>r.type==='attributes'&&r.attributeName==='lang'))identify();else if(records.some(r=>r.type==='attributes'||r.type==='characterData'||[...r.addedNodes,...r.removedNodes].some(n=>n!==host)))schedule();});
   chrome.storage.local.get(['words','settings']).then(data=>{words=data.words||{};settings=Lingo.settings(data.settings);identify();observer.observe(document.body,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:['lang','class','style','hidden']});observer.observe(document.documentElement,{attributes:true,attributeFilter:['lang','class','style']});});
   matchMedia('(prefers-color-scheme: dark)').addEventListener('change',schedule);
