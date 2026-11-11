@@ -24,6 +24,8 @@
 
 Masaüstü Chrome 120 veya daha yeni sürüm gerekir.
 
+Ana sayfa: https://chtcngz.github.io/lingo-leaf/ · Gizlilik politikası: https://chtcngz.github.io/lingo-leaf/privacy.html
+
 Seçim kartındaki yerel çeviri için masaüstü Chrome 138 veya daha yeni sürüm gerekir. İlk çeviride Chrome İngilizce–Türkçe dil paketini indirebilir; kart indirme durumunu gösterir. Çeviri tarayıcıda yapılır, seçilen metin harici bir çeviri servisine gönderilmez.
 
 ## Chrome'lar arası senkron
