@@ -1,40 +1,42 @@
 <!DOCTYPE html>
-<html lang="tr">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>LingoLeaf — Okurken İngilizce</title>
-<meta name="description" content="LingoLeaf, İngilizce okurken bilmediğin kelimeleri renklendiren, Türkçe karşılıklarını gösteren ve öğrenmeni takip eden bir tarayıcı eklentisidir.">
+<meta name="google-site-verification" content="_SgmbjBTtyTGB5DwlBCYhOKNVDYIsIMRwzYBQDJRFKg" />
+<title>LingoLeaf</title>
+<meta name="description" content="LingoLeaf is a browser extension for Chrome and Edge that helps you learn English vocabulary while you read web pages.">
 <link rel="icon" href="icon.png">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <main>
-<header><img src="icon.png" alt=""><div><b>LingoLeaf</b><small>Okurken İngilizce · Learn English while you read</small></div></header>
-<nav><a href="privacy.html">Gizlilik politikası / Privacy policy</a><a href="https://github.com/chtcngz/lingo-leaf">Kaynak kod / Source code</a></nav>
+<header><img src="icon.png" alt="LingoLeaf logo"><div><b>LingoLeaf</b><small>Learn English while you read · Okurken İngilizce</small></div></header>
+<nav><a href="privacy.html">Privacy Policy</a><a href="#tr">Türkçe</a><a href="https://github.com/chtcngz/lingo-leaf">Source code</a></nav>
 
-<h1>İngilizce okurken kelimelerini tanı, öğren ve takip et.</h1>
-<p>LingoLeaf, Chrome ve Edge için bir tarayıcı eklentisidir. İngilizce web sayfalarında kelimeleri bildiğin, öğrenmekte olduğun ve henüz tanımadığın şeklinde renklendirir; seçtiğin metnin Türkçe çevirisini tarayıcının kendi yerel çeviri özelliğiyle gösterir.</p>
+<h1>LingoLeaf</h1>
+<p><b>LingoLeaf is a free browser extension for Chrome and Microsoft Edge that helps Turkish speakers learn English vocabulary while reading English web pages.</b></p>
 
-<div class="box">
-<ul>
-<li>Bilinmeyen, öğreniyorum, öğrendim ve biliyorum durumlarıyla sayfa üzerinde renklendirme.</li>
-<li><code>give up</code> gibi fiil öbeklerini ve kalıp ifadeleri tek öğe olarak tanıma.</li>
-<li>Yan panelde kişisel kelime listesi, Türkçe karşılıklar, notlar, örnek cümleler ve günlük hedef.</li>
-<li>Paneldeki kelimenin sayfada nerede geçtiğini gösterme.</li>
-<li>İsteğe bağlı eşitleme: tarayıcının kendi senkronu veya kendi Google Drive'ın üzerinden Chrome ve Edge arasında.</li>
-</ul>
-</div>
+<h2>What LingoLeaf does</h2>
+<div class="box"><ul>
+<li>Colors words on English pages by whether you already know them, are learning them, or have not seen them yet.</li>
+<li>Shows the Turkish translation of selected text using the browser's built-in, on-device translator.</li>
+<li>Recognizes phrasal verbs (such as <i>give up</i>) and fixed expressions as single items.</li>
+<li>Keeps a personal word list in the side panel with Turkish meanings, notes, example sentences, a daily goal and progress charts.</li>
+<li>Shows where a saved word appears on the current page.</li>
+<li>Optionally syncs your word list between your browsers (for example Chrome at home and Edge at work).</li>
+</ul></div>
 
-<h2>Google Drive senkronu</h2>
-<p>Drive senkronu isteğe bağlıdır ve yalnızca sen <b>Google ile bağlan</b> düğmesine bastığında çalışır. LingoLeaf yalnızca <code>drive.appdata</code> iznini ister: kelime listen Drive'ındaki gizli uygulama klasöründe tek bir dosyada saklanır. LingoLeaf Drive'ındaki diğer dosyaları göremez, okuyamaz ve değiştiremez. Verilerin geliştiriciye veya başka bir sunucuya gönderilmez. Ayrıntılar için <a href="privacy.html">gizlilik politikasına</a> bak.</p>
+<h2>How LingoLeaf uses Google user data</h2>
+<p>Google sign-in is used only for the optional Google Drive sync, and only after you press <b>Google ile bağlan</b> (Connect with Google) in the extension's settings. LingoLeaf requests a single scope, <code>https://www.googleapis.com/auth/drive.appdata</code>, to store your LingoLeaf word list in one file (<code>lingoleaf.json</code>) inside the hidden application data folder of <em>your own</em> Google Drive, so that every browser you connect sees the same list.</p>
+<p>LingoLeaf cannot see, read or change any other file in your Drive, does not request your name or email address, and never sends your data to the developer or any third party. The developer operates no server. Read the full <a href="privacy.html">LingoLeaf Privacy Policy</a>.</p>
 
 <hr>
-<h2>In English</h2>
-<p>LingoLeaf is a browser extension for Chrome and Edge that helps Turkish speakers learn English while reading the web. It colors words on English pages by whether you know them, are learning them or have not seen them yet, shows Turkish translations using the browser's on-device translator, and tracks your progress in a side panel.</p>
-<p>Optional Google Drive sync uses only the <code>drive.appdata</code> scope: your word list is stored in a single file in the hidden application data folder of <em>your own</em> Google Drive so it can be shared between your browsers. LingoLeaf cannot see your other Drive files, and no data is sent to the developer or any third-party server. See the <a href="privacy.html">privacy policy</a>.</p>
+<h2 id="tr">LingoLeaf (Türkçe)</h2>
+<p>LingoLeaf, Chrome ve Edge için ücretsiz bir tarayıcı eklentisidir. İngilizce web sayfalarında kelimeleri bildiğin, öğrenmekte olduğun ve henüz tanımadığın şeklinde renklendirir; seçtiğin metnin Türkçe çevirisini tarayıcının yerel çeviri özelliğiyle gösterir; yan panelde kişisel kelime listeni, notlarını ve ilerlemeni tutar.</p>
+<p>İsteğe bağlı Google Drive senkronu yalnızca <code>drive.appdata</code> iznini kullanır: kelime listen kendi Drive'ındaki gizli uygulama klasöründe saklanır. LingoLeaf Drive'ındaki diğer dosyaları göremez; verilerin geliştiriciye gönderilmez. Ayrıntılar: <a href="privacy.html">Gizlilik politikası</a>.</p>
 
-<footer>LingoLeaf · <a href="privacy.html">Gizlilik / Privacy</a> · <a href="https://github.com/chtcngz/lingo-leaf/issues">İletişim / Contact</a></footer>
+<footer>LingoLeaf · <a href="privacy.html">Privacy Policy / Gizlilik politikası</a> · <a href="https://github.com/chtcngz/lingo-leaf/issues">Contact / İletişim</a></footer>
 </main>
 </body>
 </html>
