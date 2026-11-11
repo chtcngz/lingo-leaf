@@ -109,7 +109,9 @@ Güncelleme: 11 Kasım 2026 · Sürüm: 0.10.0
 - [x] İsteğe bağlı Google Drive senkronu: Chrome, Edge ve diğer Chromium tarayıcılar arasında (`drive.appdata` gizli klasörü, tek JSON dosyası).
 - [x] Kelimeler, notlar, örnekler, kaynaklar, kaldırmalar, ayarlar, öğrenme geçmişi ve okuma süresi; kelime başına en yeni değişiklik, ayarlarda en son değiştirilen kazanır.
 - [x] Değişiklikten birkaç saniye sonra yükleme, açılışta ve 5 dakikada bir kontrol; değişiklik yoksa yalnızca dosya listesi okunur.
-- [x] Kullanıcının kendi OAuth istemcisiyle bağlanma; erişim izninin sessiz yenilenmesi, süresi dolunca yeniden bağlan uyarısı; README'de adım adım kurulum rehberi.
+- [x] Tek düğme **Google ile bağlan**: LingoLeaf'in kendi OAuth istemcisi ve `manifest.json` `key` ile sabit eklenti kimliği (`ahpbjjdapeegefbckcfnoikbmbggmfgh`); Gelişmiş'te kendi istemcini kullanma.
+- [x] Erişim izninin sessiz yenilenmesi, süresi dolunca yeniden bağlan uyarısı; README'de kurulum ve kullanıcı ekleme rehberi.
+- [ ] Google'da "Yayında" moduna geçip test kullanıcısı listesi ve doğrulanmamış uygulama uyarısını kaldırma.
 - [ ] Gerçek Google hesabı, Chrome ve Edge ile uçtan uca deneme.
 
 ## Sonraki çeviri geliştirmeleri

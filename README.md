@@ -10,6 +10,8 @@
 4. `chrome://extensions` sayfasında mevcut LingoLeaf kartındaki yenile simgesine bas.
 5. Açık web sayfalarını ve yan paneli yenile.
 
+**0.10.0'a geçerken önce yedek al.** Bu sürüm eklentiye sabit bir kimlik verir. Chrome kayıtları eklenti kimliğine bağlı tuttuğu için, 0.9.0 ve öncesinden gelenlerin kelimeleri güncellemeden sonra görünmez (silinmez, eski kimlikte kalır). Güncellemeden **önce** Ayarlar → Yedek indir, güncellemeden **sonra** Ayarlar → Yedek yükle. Bu yalnızca bir kez gerekir.
+
 **Eklentiyi kaldırma.** Aynı klasörden güncellemek kayıtlarını korur. Farklı klasörden yeni eklenti olarak yüklersen eski kayıtlar görünmeyebilir; JSON yedeğini Ayarlar → Yedek yükle ile içe aktarabilirsin.
 
 ## İlk kez yükle
@@ -26,7 +28,7 @@ Seçim kartındaki yerel çeviri için masaüstü Chrome 138 veya daha yeni sür
 
 ## Chrome'lar arası senkron
 
-Ayarlar → **Chrome senkronu** açıkken (varsayılan), aynı Google hesabıyla oturum açtığın Chrome'larda (ör. iş ve ev bilgisayarı) kelimelerin eşitlenir. Bunun için Chrome ayarlarında senkron açık olmalı ve senkronize edilenler arasında **Uzantılar** bulunmalı. Eklenti her bilgisayarda aynı kimlikle yüklü olmalı: Web Store'dan kurulan sürümde bu kendiliğinden olur; paketlenmemiş klasörden yüklendiğinde Chrome kimliği klasör yolundan türetir, yani iş ve ev bilgisayarında klasör yolu birebir aynı değilse eşitleme olmaz. Bunu `manifest.json`'a iki bilgisayarda da aynı `key` alanını ekleyerek sabitleyebilirsin; ama `key` eklemek mevcut kurulumun kimliğini değiştirir ve kayıtlar yeni kimlikte görünmez, bu yüzden önce **Yedek indir** ile JSON yedeği alıp sonra **Yedek yükle** ile geri yükle.
+Ayarlar → **Chrome senkronu** açıkken (varsayılan), aynı Google hesabıyla oturum açtığın Chrome'larda (ör. iş ve ev bilgisayarı) kelimelerin eşitlenir. Bunun için Chrome ayarlarında senkron açık olmalı ve senkronize edilenler arasında **Uzantılar** bulunmalı. 0.10.0'dan itibaren `manifest.json`'daki `key` sayesinde eklentinin kimliği her bilgisayarda ve tarayıcıda aynıdır (`ahpbjjdapeegefbckcfnoikbmbggmfgh`), klasör yolu fark etmez.
 
 - Eşitlenenler: kelime/ifade, durum, eklenme ve ilk öğrenme tarihi, Türkçe karşılık ve kaldırılan kelimeler.
 - Bu cihazda kalanlar: notlar, örnek cümleler, kaynak bağlantıları, ayarlar, okuma süresi ve geçmiş.
@@ -36,7 +38,11 @@ Ayarlar → **Chrome senkronu** açıkken (varsayılan), aynı Google hesabıyla
 
 ## Google Drive senkronu (isteğe bağlı)
 
-Chrome ve Edge dahil, Google Drive'ını bağladığın her tarayıcıda (ör. evde Chrome, işte Edge) şunlar eşitlenir: kelimeler ve durumları, Türkçe karşılıklar, notlar, örnek cümleler, kaynaklar, kaldırılan kelimeler, ayarlar, öğrenme geçmişi ve okuma süresi.
+**Bağlanmak:** Ayarlar → Google Drive senkronu → **Google ile bağlan** → hesabını seç → izin ver. Bunu kullandığın her tarayıcıda (ev, iş, Chrome, Edge) bir kez yap; mevcut kelimeler birleşir, hiçbiri silinmez.
+
+LingoLeaf şimdilik Google'ın test modunda: yalnızca erişim listesine eklenen Google hesapları bağlanabilir ve girişte "Google bu uygulamayı doğrulamadı" uyarısı çıkar; **Gelişmiş → LingoLeaf'e git** ile devam edebilirsin. Listeye eklenmek için eklentinin sahibine Gmail adresini ilet.
+
+Chrome ve Edge dahil, Google ile bağladığın her tarayıcıda (ör. evde Chrome, işte Edge) şunlar eşitlenir: kelimeler ve durumları, Türkçe karşılıklar, notlar, örnek cümleler, kaynaklar, kaldırılan kelimeler, ayarlar, öğrenme geçmişi ve okuma süresi.
 
 - Veriler Drive'ındaki **gizli uygulama klasöründe** tek bir `lingoleaf.json` dosyasında durur. Bu dosya Drive'ında listelenmez ve eklenti Drive'ındaki diğer dosyaları göremez (izin kapsamı yalnızca `drive.appdata`).
 - Bir kelime iki yerde değiştiyse en son yapılan değişiklik geçerli olur. Ayarlarda da en son değiştirilen geçerli olur.
@@ -45,9 +51,13 @@ Chrome ve Edge dahil, Google Drive'ını bağladığın her tarayıcıda (ör. e
 - Chrome senkronu ile birlikte açık kalabilir; ikisi aynı kuralla birleştirir.
 - **Bağlantıyı kes** bu cihazdaki kayıtları silmez; yalnızca eşitlemeyi durdurur. Erişimi tamamen kaldırmak için Google hesabında *Güvenlik → Üçüncü taraf uygulamalar ve hizmetler* bölümünden uygulamayı kaldırabilirsin.
 
-### Google Drive senkronu kurulumu
+### Erişim listesine kullanıcı eklemek (eklenti sahibi için)
 
-Bunu bir kez yaparsın, yaklaşık 10 dakika sürer. Ücretsizdir; kart bilgisi gerekmez.
+Google Cloud Console → LingoLeaf projesi → **Google Auth Platform → Kitle (Audience) → Test kullanıcıları → Kullanıcı ekle** → Gmail adresini yaz → **Kaydet**. En fazla 100 kullanıcı eklenebilir.
+
+### Kendi Google istemcini kullanmak (isteğe bağlı)
+
+Yalnızca LingoLeaf'in istemcisi yerine kendi Google Cloud projeni kullanmak istersen gerekir. Ayarlar'daki **Gelişmiş: kendi Google istemcini kullan** bölümüne kendi istemci kimliğini yazarsın. Bir kez yapılır, yaklaşık 10 dakika sürer; ücretsizdir, kart bilgisi gerekmez.
 
 **1. Google Cloud projesi**
 
@@ -64,25 +74,24 @@ Bunu bir kez yaparsın, yaklaşık 10 dakika sürer. Ücretsizdir; kart bilgisi 
 
 **3. OAuth istemci kimliği**
 
-1. Önce her tarayıcıda LingoLeaf'i aç → **Ayarlar → Google Drive senkronu** → **Bu tarayıcının yönlendirme adresi**'ni **Kopyala**. Adres `https://<eklenti-kimliği>.chromiumapp.org/` biçimindedir. Ev Chrome'u, iş Chrome'u ve Edge'de eklenti kimlikleri farklıysa her birinin adresini not al.
+1. LingoLeaf → **Ayarlar → Google Drive senkronu → Gelişmiş** → **Bu tarayıcının yönlendirme adresi**'ni **Kopyala**. Eklenti kimliği `manifest.json`'daki `key` ile sabit olduğundan adres her tarayıcıda aynıdır: `https://ahpbjjdapeegefbckcfnoikbmbggmfgh.chromiumapp.org/`.
 2. Cloud Console → **API'ler ve Hizmetler → Kimlik bilgileri** (yeni arayüzde **Google Auth Platform → Clients**) → **Kimlik bilgisi oluştur → OAuth istemci kimliği**.
 3. Uygulama türü: **Web uygulaması**. Ad: `LingoLeaf`.
-4. **Yetkilendirilmiş yönlendirme URI'leri** bölümüne 1. adımda kopyaladığın adreslerin hepsini ayrı satırlar olarak ekle (sondaki `/` dahil). *Yetkilendirilmiş JavaScript kaynakları* boş kalabilir.
+4. **Yetkilendirilmiş yönlendirme URI'leri** bölümüne 1. adımdaki adresi ekle (sondaki `/` dahil). *Yetkilendirilmiş JavaScript kaynakları* boş kalabilir.
 5. **Oluştur**. Çıkan **İstemci kimliği**'ni (`…apps.googleusercontent.com`) kopyala. İstemci gizli anahtarı (client secret) gerekmez.
 
 **4. Her tarayıcıda bağlan**
 
-1. LingoLeaf → **Ayarlar → Google Drive senkronu** → **OAuth istemci kimliği** alanına yapıştır → **Bağlan**.
+1. LingoLeaf → **Ayarlar → Google Drive senkronu → Gelişmiş** → **OAuth istemci kimliği** alanına yapıştır → **Google ile bağlan**.
 2. Tarayıcı `www.googleapis.com` erişimi için izin isterse **İzin ver**.
 3. Google penceresinde hesabını seç. "Google bu uygulamayı doğrulamadı" uyarısı çıkarsa **Gelişmiş → LingoLeaf'e git (güvenli değil)** de; bu uygulamayı sen oluşturduğun için beklenen bir uyarıdır. Drive izni için **Devam**.
 4. Durum satırında "Bağlı · son eşitleme …" görünür. Diğer tarayıcılarda aynı istemci kimliğiyle tekrarla; mevcut kelimeler birleşir, hiçbiri silinmez.
 
 **Sorun giderme**
 
-- `redirect_uri_mismatch`: Bu tarayıcının yönlendirme adresi istemciye eklenmemiş. Panelden adresi tekrar kopyala, 3. bölüm 4. adımda ekle; Google'da değişikliğin geçerli olması birkaç dakika sürebilir.
-- `access_denied` / "erişim engellendi": Hesabın test kullanıcısı olarak eklenmemiş (2. bölüm 3. adım).
+- `redirect_uri_mismatch`: Yönlendirme adresi istemciye eklenmemiş ya da `manifest.json`'daki `key` kaldırılmış (kimlik değişmiş). Adresi panelden tekrar kopyala ve istemciye ekle; Google'da değişikliğin geçerli olması birkaç dakika sürebilir.
+- `access_denied` / "erişim engellendi": Hesap test kullanıcısı olarak eklenmemiş (yukarıdaki erişim listesi).
 - "Google oturumunun süresi doldu": Tarayıcıda Google oturumun kapanmış. **Yeniden bağlan**'a bas. Oturum açık kaldıkça eklenti izni sessizce yeniler.
-- Paketlenmemiş yüklemede klasör yolu değişirse eklenti kimliği, dolayısıyla yönlendirme adresi de değişir; yeni adresi istemciye eklemen gerekir.
 
 ## Okurken
 

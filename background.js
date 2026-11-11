@@ -74,7 +74,7 @@ chrome.runtime.onMessage.addListener((msg,sender,respond)=>{
     });
     if(msg.type==='syncNow')return enqueue(syncNow);
     if(msg.type==='driveConnect')return enqueue(async()=>{
-      const clientId=String(msg.clientId||'').trim();if(!/^[\w.-]+\.apps\.googleusercontent\.com$/.test(clientId))throw Error('Geçerli bir OAuth istemci kimliği gir (…apps.googleusercontent.com).');
+      const clientId=String(msg.clientId||LingoDrive.CLIENT_ID).trim();if(!/^[\w.-]+\.apps\.googleusercontent\.com$/.test(clientId))throw Error('Geçerli bir OAuth istemci kimliği gir (…apps.googleusercontent.com).');
       const data=await chrome.storage.local.get('drive');await chrome.storage.local.set({drive:{...data.drive,clientId,connected:true,localPrint:'',md5:''}});
       chrome.alarms.create('drive',{periodInMinutes:5});return driveSync('poll');
     });

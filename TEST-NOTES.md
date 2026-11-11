@@ -2,10 +2,11 @@
 
 11 Kasım 2026:
 
-- `node --test tests/*.test.js` (33 test). Yeni `tests/drive.test.js`: birleştirme kuralları (en yeni sürüm, eksik not/karşılığın diğer taraftan tamamlanması, silme, olayların tekilleştirilmesi, okuma süresinde büyük olan, ayarlarda en yenisi), anahtar sırasından bağımsız parmak izi; Drive API'sinin URL'lerini (dosya listesi, `alt=media`, multipart oluşturma, `uploadType=media` güncelleme) yanıtlayan sahte Drive ile gerçek `background.js`'in üç kopyası (Chrome ev, Chrome iş, Edge): not ve ayarlar Edge'e geçti, Edge'deki durum değişikliği ve silme diğerlerine ulaştı, tek dosya kaldı, değişiklik yokken yalnızca liste isteği atıldı ve yükleme olmadı; süresi dolan izin `prompt=none` ile sessizce yenilendi; yerel değişiklik yokken ağ isteği atılmadı; bağlantı kesince eşitleme durdu ve kayıtlar kaldı; geçersiz istemci kimliği reddedildi.
+- `node --test tests/*.test.js` (34 test). Yeni `tests/drive.test.js`: birleştirme kuralları (en yeni sürüm, eksik not/karşılığın diğer taraftan tamamlanması, silme, olayların tekilleştirilmesi, okuma süresinde büyük olan, ayarlarda en yenisi), anahtar sırasından bağımsız parmak izi; Drive API'sinin URL'lerini (dosya listesi, `alt=media`, multipart oluşturma, `uploadType=media` güncelleme) yanıtlayan sahte Drive ile gerçek `background.js`'in üç kopyası (Chrome ev, Chrome iş, Edge): not ve ayarlar Edge'e geçti, Edge'deki durum değişikliği ve silme diğerlerine ulaştı, tek dosya kaldı, değişiklik yokken yalnızca liste isteği atıldı ve yükleme olmadı; süresi dolan izin `prompt=none` ile sessizce yenilendi; yerel değişiklik yokken ağ isteği atılmadı; bağlantı kesince eşitleme durdu ve kayıtlar kaldı; geçersiz istemci kimliği reddedildi.
 - Ayrı benzetimde gerçek `storage.onChanged` olaylarıyla iki Chrome (ortak `storage.sync`) ve bir Edge (ayrı) Drive üzerinden aynı listeye ulaştı; 5 Drive yüklemesi ve 6 sync yazımından sonra iki senkron da durdu.
 - Panel ayarlarındaki Drive kutusu Playwright'ta ekran görüntüsüyle kontrol edildi.
-- Gerçek Google OAuth girişi, Drive API ve Edge denenmedi.
+- `key` ile paketlenmemiş yüklenen eklentinin Chromium'da `ahpbjjdapeegefbckcfnoikbmbggmfgh` kimliğini ve `https://ahpbjjdapeegefbckcfnoikbmbggmfgh.chromiumapp.org/` yönlendirme adresini aldığı Playwright ile doğrulandı. Gerçek Google yetkilendirme adresi LingoLeaf istemcisi ve bu yönlendirme adresiyle giriş sayfasına yönlendirdi; başka bir eklenti kimliğiyle `redirect_uri_mismatch` verdi.
+- Gerçek Google hesabıyla giriş, Drive API ve Edge denenmedi.
 
 # 0.9.0 doğrulama notları
 

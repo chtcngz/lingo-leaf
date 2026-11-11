@@ -140,3 +140,15 @@ test('disconnecting stops syncing and keeps local words', async () => {
   assert.ok(solo.store.words.vote);
   await assert.rejects(solo.send({ type: 'driveConnect', clientId: 'not-a-client-id' }));
 });
+
+test('connecting without a client id uses the built-in LingoLeaf client and the fixed extension id', async () => {
+  const drive = fakeDrive(), solo = device(drive, {});
+  let used;
+  solo.context.chrome.identity.launchWebAuthFlow = async ({ url }) => { used = new URL(url); return `https://x/#access_token=${drive.token()}&expires_in=3599`; };
+  assert.equal((await solo.send({ type: 'driveConnect' })).error, '');
+  assert.equal(used.searchParams.get('client_id'), Drive.CLIENT_ID);
+  assert.equal(solo.store.drive.clientId, Drive.CLIENT_ID);
+  const manifest = JSON.parse(fs.readFileSync(path.join(__dirname, '../manifest.json'), 'utf8'));
+  const der = Buffer.from(manifest.key, 'base64'), id = [...crypto.createHash('sha256').update(der).digest('hex').slice(0, 32)].map(c => String.fromCharCode(97 + parseInt(c, 16))).join('');
+  assert.equal(id, 'ahpbjjdapeegefbckcfnoikbmbggmfgh');
+});

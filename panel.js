@@ -129,20 +129,20 @@ function renderSync(){
 let driveInfo={};
 function renderDrive(){
   $('drive-redirect').value=chrome.identity?.getRedirectURL?.()||'';
-  if(document.activeElement!==$('drive-client'))$('drive-client').value=driveInfo.clientId||'';
+  if(document.activeElement!==$('drive-client'))$('drive-client').value=driveInfo.clientId&&driveInfo.clientId!==LingoDrive.CLIENT_ID?driveInfo.clientId:'';
   const on=!!driveInfo.connected,s=driveInfo.status;
-  $('drive-connect').textContent=on&&s?.error==='reconnect'?'Yeniden bağlan':'Bağlan';$('drive-connect').hidden=on&&s?.error!=='reconnect';
+  $('drive-connect').textContent=on&&s?.error==='reconnect'?'Yeniden bağlan':'Google ile bağlan';$('drive-connect').hidden=on&&s?.error!=='reconnect';
   $('drive-sync').hidden=!on;$('drive-disconnect').hidden=!on;$('drive-client').disabled=on;
   const time=s?.at?new Date(s.at).toLocaleString('tr',{hour:'2-digit',minute:'2-digit',day:'numeric',month:'short'}):'';
   $('drive-status').textContent=!on?'Bağlı değil.':!s?'Bağlanıyor…':s.error==='reconnect'?'Google oturumunun süresi doldu. Yeniden bağlanman gerekiyor.':s.error?`Son deneme başarısız (${time}): ${s.error}`:`Bağlı · son eşitleme ${time} · ${(s.count||0).toLocaleString('tr')} kayıt. Değişiklikler birkaç saniye içinde, diğer cihazlardakiler en geç 5 dakikada gelir.`;
 }
 $('drive-copy').onclick=()=>safe(async()=>{await navigator.clipboard.writeText($('drive-redirect').value);toast('Yönlendirme adresi kopyalandı.');});
 $('drive-connect').onclick=()=>safe(async()=>{
-  const clientId=$('drive-client').value.trim();
-  if(!/^[\w.-]+\.apps\.googleusercontent\.com$/.test(clientId))throw Error('Önce Google Cloud\'dan aldığın OAuth istemci kimliğini yapıştır (…apps.googleusercontent.com).');
+  const clientId=$('drive-client').value.trim()||LingoDrive.CLIENT_ID;
+  if(!/^[\w.-]+\.apps\.googleusercontent\.com$/.test(clientId))throw Error('Gelişmiş bölümündeki istemci kimliği geçersiz (…apps.googleusercontent.com). Boş bırakabilirsin.');
   const granted=await chrome.permissions.request({origins:['https://www.googleapis.com/*']});
   if(!granted)throw Error('Google Drive\'a bağlanmak için www.googleapis.com erişimine izin vermelisin.');
-  let token;try{token=await LingoDrive.authorize(chrome.identity,clientId,true);}catch(e){throw Error(`Google izni alınamadı: ${e.message}. Yönlendirme adresinin istemciye eklendiğini ve hesabının test kullanıcısı olduğunu kontrol et.`);}
+  let token;try{token=await LingoDrive.authorize(chrome.identity,clientId,true);}catch(e){throw Error(`Google izni alınamadı: ${e.message}. Hesabının LingoLeaf'e erişim listesinde olduğundan emin ol.`);}
   await chrome.storage.session.set({driveToken:token});
   const status=await send({type:'driveConnect',clientId});toast(status?.error?`Bağlandı, ama eşitleme başarısız: ${status.error}`:'Google Drive bağlandı ve eşitlendi.');
 });

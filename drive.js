@@ -3,6 +3,8 @@
 // see the user's other files). Unlike chrome.storage.sync there is no size limit, so notes, examples,
 // sources, settings, history and reading time travel too. Per word the newest change wins, as in sync.js.
 (() => {
+  // LingoLeaf's own OAuth client (public by design; only the extension's fixed redirect address is allowed).
+  const CLIENT_ID = '880054170663-n8ah8512fvgf4hu6jru79pulia750iua.apps.googleusercontent.com';
   const FILE = 'lingoleaf.json', SCOPE = 'https://www.googleapis.com/auth/drive.appdata', KEEP_DELETED = 60 * 86400000;
   const API = 'https://www.googleapis.com/drive/v3/files', UPLOAD = 'https://www.googleapis.com/upload/drive/v3/files';
   const time = value => { const ms = Date.parse(value); return Number.isFinite(ms) ? ms : 0; };
@@ -99,6 +101,6 @@
     };
   }
 
-  globalThis.LingoDrive = { FILE, SCOPE, merge, fingerprint, authorize, client };
+  globalThis.LingoDrive = { CLIENT_ID, FILE, SCOPE, merge, fingerprint, authorize, client };
   if (typeof module !== 'undefined') module.exports = globalThis.LingoDrive;
 })();
