@@ -1,6 +1,6 @@
 # LingoLeaf — Yol haritası
 
-Güncelleme: 11 Kasım 2026 · Sürüm: 0.9.0
+Güncelleme: 11 Kasım 2026 · Sürüm: 0.10.0
 
 ## Kapsam
 
@@ -103,7 +103,16 @@ Güncelleme: 11 Kasım 2026 · Sürüm: 0.9.0
 - [x] 100 KB / 8 KB sınırlarına uyan 32 parçalı sıkı biçim; yer azalınca önce karşılıklar düşer, alan dolunca uyarı.
 - [x] Ayarlarda aç/kapat ve son eşitleme durumu.
 - [ ] İki gerçek Chrome profilinde (iş/ev) uçtan uca deneme.
-- [ ] Chrome ile Edge arası eşitleme (Google Drive gibi harici bir depo gerekir).
+
+## 0.10.0 Google Drive senkronu
+
+- [x] İsteğe bağlı Google Drive senkronu: Chrome, Edge ve diğer Chromium tarayıcılar arasında (`drive.appdata` gizli klasörü, tek JSON dosyası).
+- [x] Kelimeler, notlar, örnekler, kaynaklar, kaldırmalar, ayarlar, öğrenme geçmişi ve okuma süresi; kelime başına en yeni değişiklik, ayarlarda en son değiştirilen kazanır.
+- [x] Değişiklikten birkaç saniye sonra yükleme, açılışta ve 5 dakikada bir kontrol; değişiklik yoksa yalnızca dosya listesi okunur.
+- [x] Tek düğme **Google ile bağlan**: LingoLeaf'in kendi OAuth istemcisi ve `manifest.json` `key` ile sabit eklenti kimliği (`ahpbjjdapeegefbckcfnoikbmbggmfgh`); Gelişmiş'te kendi istemcini kullanma.
+- [x] Erişim izninin sessiz yenilenmesi, süresi dolunca yeniden bağlan uyarısı; README'de kurulum ve kullanıcı ekleme rehberi.
+- [ ] Google'da "Yayında" moduna geçip test kullanıcısı listesi ve doğrulanmamış uygulama uyarısını kaldırma.
+- [ ] Gerçek Google hesabı, Chrome ve Edge ile uçtan uca deneme.
 
 ## Sonraki çeviri geliştirmeleri
 
