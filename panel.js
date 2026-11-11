@@ -108,7 +108,7 @@ function renderPreview(){
     box.append(sample);
   }
 }
-function renderSettings(){renderSync();for(const k of ['enabled','menu','names','sync'])$(k).checked=data.settings[k];for(const k of ['goal','theme','intensity'])$(k).value=data.settings[k];for(const k of ['unknown','learning','learned'])$(`color-${k}`).value=data.settings.colors[k];theme();renderPreview();}
+function renderSettings(){renderSync();renderDrive();for(const k of ['enabled','menu','names','sync'])$(k).checked=data.settings[k];for(const k of ['goal','theme','intensity'])$(k).value=data.settings[k];for(const k of ['unknown','learning','learned'])$(`color-${k}`).value=data.settings.colors[k];theme();renderPreview();}
 for(const k of ['enabled','menu','names','sync','goal','theme','intensity'])$(k).onchange=()=>safe(async()=>{
   let value=$(k).type==='checkbox'?$(k).checked:$(k).value;if(k==='goal'){value=Math.max(1,Math.min(1000,Math.floor(Number(value)||5)));$(k).value=value;}
   await send({type:'settings',patch:{[k]:value}});home();toast('Ayar kaydedildi.');
@@ -125,6 +125,29 @@ function renderSync(){
   else if(s.error)box.textContent=`Son eşitleme denemesi başarısız (${time}): ${s.error}`;
   else box.textContent=`${base} Son eşitleme ${time} · ${s.count.toLocaleString('tr')} kayıt · senkron alanı doluluğu %${full}${s.translations?'':' · yer kalmadığı için Türkçe karşılıklar eşitlenmiyor'}.`;
 }
+// Google Drive sync: the auth window must open from this click, so the panel asks for access itself and hands the token to the background.
+let driveInfo={};
+function renderDrive(){
+  $('drive-redirect').value=chrome.identity?.getRedirectURL?.()||'';
+  if(document.activeElement!==$('drive-client'))$('drive-client').value=driveInfo.clientId||'';
+  const on=!!driveInfo.connected,s=driveInfo.status;
+  $('drive-connect').textContent=on&&s?.error==='reconnect'?'Yeniden bağlan':'Bağlan';$('drive-connect').hidden=on&&s?.error!=='reconnect';
+  $('drive-sync').hidden=!on;$('drive-disconnect').hidden=!on;$('drive-client').disabled=on;
+  const time=s?.at?new Date(s.at).toLocaleString('tr',{hour:'2-digit',minute:'2-digit',day:'numeric',month:'short'}):'';
+  $('drive-status').textContent=!on?'Bağlı değil.':!s?'Bağlanıyor…':s.error==='reconnect'?'Google oturumunun süresi doldu. Yeniden bağlanman gerekiyor.':s.error?`Son deneme başarısız (${time}): ${s.error}`:`Bağlı · son eşitleme ${time} · ${(s.count||0).toLocaleString('tr')} kayıt. Değişiklikler birkaç saniye içinde, diğer cihazlardakiler en geç 5 dakikada gelir.`;
+}
+$('drive-copy').onclick=()=>safe(async()=>{await navigator.clipboard.writeText($('drive-redirect').value);toast('Yönlendirme adresi kopyalandı.');});
+$('drive-connect').onclick=()=>safe(async()=>{
+  const clientId=$('drive-client').value.trim();
+  if(!/^[\w.-]+\.apps\.googleusercontent\.com$/.test(clientId))throw Error('Önce Google Cloud\'dan aldığın OAuth istemci kimliğini yapıştır (…apps.googleusercontent.com).');
+  const granted=await chrome.permissions.request({origins:['https://www.googleapis.com/*']});
+  if(!granted)throw Error('Google Drive\'a bağlanmak için www.googleapis.com erişimine izin vermelisin.');
+  let token;try{token=await LingoDrive.authorize(chrome.identity,clientId,true);}catch(e){throw Error(`Google izni alınamadı: ${e.message}. Yönlendirme adresinin istemciye eklendiğini ve hesabının test kullanıcısı olduğunu kontrol et.`);}
+  await chrome.storage.session.set({driveToken:token});
+  const status=await send({type:'driveConnect',clientId});toast(status?.error?`Bağlandı, ama eşitleme başarısız: ${status.error}`:'Google Drive bağlandı ve eşitlendi.');
+});
+$('drive-sync').onclick=()=>safe(async()=>{const status=await send({type:'driveSync'});toast(status?.error?'Eşitleme başarısız.':'Eşitlendi.');});
+$('drive-disconnect').onclick=()=>safe(async()=>{await send({type:'driveDisconnect'});toast('Google Drive bağlantısı kesildi. Bu cihazdaki kayıtlar yerinde duruyor.');});
 for(const k of ['unknown','learning','learned'])$(`color-${k}`).onchange=()=>safe(()=>send({type:'settings',patch:{colors:{[k]:$(`color-${k}`).value}}}));
 $('reset-colors').onclick=()=>safe(()=>send({type:'settings',patch:{colors:Lingo.defaults.colors}}));
 function download(name,body,type){const url=URL.createObjectURL(new Blob([body],{type}));const a=el('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
@@ -183,6 +206,6 @@ async function fillTranslations(list,gesture=false){
   }catch{}finally{missing.forEach(row=>translating.delete(row.word));}
 }
 $('translate-words').onclick=()=>safe(()=>fillTranslations(filtered().slice(0,limit),true));$('site-mode').onchange=()=>safe(async()=>{if(!activeHost)return;await send({type:'settings',patch:{siteModes:{[activeHost]:$('site-mode').value}}});toast('Bu sitenin ayarı kaydedildi.');});
-chrome.storage.onChanged.addListener((changes,area)=>{if(area!=='local')return;if(changes.syncStatus){syncStatus=changes.syncStatus.newValue||null;renderSync();}for(const k of ['words','events','activity'])if(changes[k])data[k]=changes[k].newValue||(k==='events'?[]:{});if(changes.settings){data.settings=Lingo.settings(changes.settings.newValue);renderSettings();}if(changes.activity||changes.events)home();if(changes.words){setTimeout(refreshCounts,800);for(const word of selected)if(!data.words[word])selected.delete(word);home();renderLibrary();renderTokens();}if(changes.pending){setSource(changes.pending.newValue?.text||'',changes.pending.newValue?.url||'');view('add');}});
+chrome.storage.onChanged.addListener((changes,area)=>{if(area!=='local')return;if(changes.syncStatus){syncStatus=changes.syncStatus.newValue||null;renderSync();}if(changes.drive){driveInfo=changes.drive.newValue||{};renderDrive();}for(const k of ['words','events','activity'])if(changes[k])data[k]=changes[k].newValue||(k==='events'?[]:{});if(changes.settings){data.settings=Lingo.settings(changes.settings.newValue);renderSettings();}if(changes.activity||changes.events)home();if(changes.words){setTimeout(refreshCounts,800);for(const word of selected)if(!data.words[word])selected.delete(word);home();renderLibrary();renderTokens();}if(changes.pending){setSource(changes.pending.newValue?.text||'',changes.pending.newValue?.url||'');view('add');}});
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change',theme);
-(async()=>{const saved=await chrome.storage.local.get(['words','settings','events','activity','pending','syncStatus']);syncStatus=saved.syncStatus||null;data={words:saved.words||{},settings:Lingo.settings(saved.settings),events:saved.events||[],activity:saved.activity||{}};renderSettings();home();renderLibrary();if(saved.pending?.text&&Date.now()-saved.pending.nonce<120000){setSource(saved.pending.text,saved.pending.url);view('add');}else{renderTokens();refreshPage();}})().catch(e=>toast(e.message));
+(async()=>{const saved=await chrome.storage.local.get(['words','settings','events','activity','pending','syncStatus','drive']);syncStatus=saved.syncStatus||null;driveInfo=saved.drive||{};data={words:saved.words||{},settings:Lingo.settings(saved.settings),events:saved.events||[],activity:saved.activity||{}};renderSettings();home();renderLibrary();if(saved.pending?.text&&Date.now()-saved.pending.nonce<120000){setSource(saved.pending.text,saved.pending.url);view('add');}else{renderTokens();refreshPage();}})().catch(e=>toast(e.message));

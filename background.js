@@ -1,4 +1,4 @@
-importScripts('phrases.js','expressions.js','core.js','sync.js');
+importScripts('phrases.js','expressions.js','core.js','sync.js','drive.js');
 const candidatePhrases=Lingo.bundledIndex();
 let queue=Promise.resolve();
 const enqueue=fn=>{const result=queue.then(fn);queue=result.catch(()=>{});return result;};
@@ -73,7 +73,17 @@ chrome.runtime.onMessage.addListener((msg,sender,respond)=>{
       if(count)await chrome.storage.local.set({words});return {count};
     });
     if(msg.type==='syncNow')return enqueue(syncNow);
-    if(msg.type==='settings')return enqueue(async()=>{const data=await chrome.storage.local.get('settings'),old=data.settings||{};const value=Lingo.settings({...old,...msg.patch,colors:{...old.colors,...msg.patch?.colors},siteModes:{...old.siteModes,...msg.patch?.siteModes}});await chrome.storage.local.set({settings:value});return value;});
+    if(msg.type==='driveConnect')return enqueue(async()=>{
+      const clientId=String(msg.clientId||'').trim();if(!/^[\w.-]+\.apps\.googleusercontent\.com$/.test(clientId))throw Error('Geçerli bir OAuth istemci kimliği gir (…apps.googleusercontent.com).');
+      const data=await chrome.storage.local.get('drive');await chrome.storage.local.set({drive:{...data.drive,clientId,connected:true,localPrint:'',md5:''}});
+      chrome.alarms.create('drive',{periodInMinutes:5});return driveSync('poll');
+    });
+    if(msg.type==='driveDisconnect')return enqueue(async()=>{
+      const data=await chrome.storage.local.get('drive');await chrome.storage.local.set({drive:{clientId:data.drive?.clientId||'',connected:false}});
+      await chrome.storage.session.remove('driveToken');await chrome.alarms.clear('drive');return {};
+    });
+    if(msg.type==='driveSync')return enqueue(()=>driveSync('poll'));
+    if(msg.type==='settings')return enqueue(async()=>{const data=await chrome.storage.local.get('settings'),old=data.settings||{};const value=Lingo.settings({...old,...msg.patch,colors:{...old.colors,...msg.patch?.colors},siteModes:{...old.siteModes,...msg.patch?.siteModes}});await chrome.storage.local.set({settings:value,settingsAt:new Date().toISOString()});return value;});
     if(msg.type==='pending'){
       const opening=sender.tab?chrome.sidePanel.open({tabId:sender.tab.id}):Promise.resolve();
       await Promise.all([pending(msg.text,{...sender.tab,url:sender.url||sender.tab?.url||msg.url}),opening]);return {};
@@ -126,7 +136,50 @@ chrome.storage.onChanged.addListener((changes,area)=>{
   if(area==='sync'&&LingoSync.keys.some(key=>changes[key]))scheduleSync(1500);
   if(area!=='local')return;
   if(changes.words)enqueue(()=>noteDeleted(changes.words.oldValue||{},changes.words.newValue||{})).then(()=>scheduleSync()).catch(console.error);
+  // Reading time alone does not trigger an upload; it travels with the next change or the periodic check.
+  if(changes.words||changes.settings||changes.syncDeleted)scheduleDrive();
   if(changes.settings&&changes.settings.newValue?.sync!==false&&changes.settings.oldValue?.sync===false)scheduleSync(0);
 });
-chrome.runtime.onStartup.addListener(()=>scheduleSync(2000));
-chrome.runtime.onInstalled.addListener(()=>scheduleSync(2000));
+chrome.runtime.onStartup.addListener(()=>{scheduleSync(2000);scheduleDrive(3000,'poll');});
+chrome.runtime.onInstalled.addListener(()=>{scheduleSync(2000);scheduleDrive(3000,'poll');});
+
+// Google Drive sync (see drive.js). 'local' runs after a change here and does nothing if the local data is unchanged;
+// 'poll' runs on startup and every 5 minutes and also picks up changes made on other devices.
+let driveTimer,driveMode='local';
+function scheduleDrive(delay=8000,mode='local'){if(mode==='poll')driveMode='poll';clearTimeout(driveTimer);driveTimer=setTimeout(()=>{const m=driveMode;driveMode='local';enqueue(()=>driveSync(m)).catch(console.error);},delay);}
+chrome.alarms?.onAlarm.addListener(alarm=>{if(alarm.name==='drive')scheduleDrive(0,'poll');});
+async function driveToken(fresh=false){
+  if(!fresh){const saved=(await chrome.storage.session.get('driveToken')).driveToken;if(saved?.expires>Date.now()+60000)return saved.token;}
+  const {drive}=await chrome.storage.local.get('drive');
+  try{const token=await LingoDrive.authorize(chrome.identity,drive.clientId,false);await chrome.storage.session.set({driveToken:token});return token.token;}
+  catch{throw Object.assign(Error('reconnect'),{reconnect:true});}
+}
+const driveState=data=>({words:data.words||{},deleted:data.syncDeleted||{},settings:data.settings||{},settingsAt:data.settingsAt||null,events:data.events||[],activity:data.activity||{}});
+async function driveSync(mode){
+  const data=await chrome.storage.local.get(['words','syncDeleted','settings','settingsAt','events','activity','drive']),drive=data.drive||{};
+  if(!drive.connected||!drive.clientId)return {off:true};
+  const local=driveState(data),localPrint=LingoDrive.fingerprint(local),changed=localPrint!==drive.localPrint;
+  if(mode==='local'&&!changed)return {skipped:true};
+  const status={at:new Date().toISOString(),error:''};let next={...drive};
+  try{
+    let api=LingoDrive.client(fetch,await driveToken());
+    let file;try{file=await api.find();}catch(error){if(!error.auth)throw error;api=LingoDrive.client(fetch,await driveToken(true));file=await api.find();}
+    if(changed||!file||file.md5Checksum!==drive.md5){
+      const remote=file?await api.read(file.id):null;
+      const merged=LingoDrive.merge(local,remote||{});merged.settings=Lingo.settings(merged.settings);
+      const remotePrint=remote?LingoDrive.fingerprint(driveState({...remote,syncDeleted:remote.deleted})):'';
+      let md5=file?.md5Checksum||'';
+      if(LingoDrive.fingerprint(driveState({...merged,syncDeleted:merged.deleted}))!==remotePrint){
+        const doc={app:'LingoLeaf',version:1,savedAt:status.at,...merged};
+        md5=(file?await api.update(file.id,doc):await api.create(doc)).md5Checksum||'';
+      }
+      // Only keys that really changed are written, so open pages are not recoloured for nothing.
+      const write={},target={words:merged.words,syncDeleted:merged.deleted,settings:merged.settings,settingsAt:merged.settingsAt,events:merged.events,activity:merged.activity};
+      for(const [key,value] of Object.entries(target))if(LingoDrive.fingerprint(value)!==LingoDrive.fingerprint(data[key]??(key==='settingsAt'?null:key==='events'?[]:key==='settings'?{}:{})))write[key]=value;
+      if(Object.keys(write).length)await chrome.storage.local.set(write);
+      next={...next,md5,localPrint:LingoDrive.fingerprint(driveState({...data,...write}))};
+      status.count=Object.keys(merged.words).length;
+    }else status.count=Object.keys(local.words).length;
+  }catch(error){status.error=error.reconnect?'reconnect':error.message||'Google Drive ile eşitlenemedi.';if(error.reconnect)await chrome.storage.session.remove('driveToken');}
+  await chrome.storage.local.set({drive:{...next,status}});return status;
+}
