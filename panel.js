@@ -108,11 +108,23 @@ function renderPreview(){
     box.append(sample);
   }
 }
-function renderSettings(){for(const k of ['enabled','menu','names'])$(k).checked=data.settings[k];for(const k of ['goal','theme','intensity'])$(k).value=data.settings[k];for(const k of ['unknown','learning','learned'])$(`color-${k}`).value=data.settings.colors[k];theme();renderPreview();}
-for(const k of ['enabled','menu','names','goal','theme','intensity'])$(k).onchange=()=>safe(async()=>{
+function renderSettings(){renderSync();for(const k of ['enabled','menu','names','sync'])$(k).checked=data.settings[k];for(const k of ['goal','theme','intensity'])$(k).value=data.settings[k];for(const k of ['unknown','learning','learned'])$(`color-${k}`).value=data.settings.colors[k];theme();renderPreview();}
+for(const k of ['enabled','menu','names','sync','goal','theme','intensity'])$(k).onchange=()=>safe(async()=>{
   let value=$(k).type==='checkbox'?$(k).checked:$(k).value;if(k==='goal'){value=Math.max(1,Math.min(1000,Math.floor(Number(value)||5)));$(k).value=value;}
   await send({type:'settings',patch:{[k]:value}});home();toast('Ayar kaydedildi.');
 });
+// Sync state written by the background after every merge.
+let syncStatus=null;
+function renderSync(){
+  const box=$('sync-status');
+  if(!data.settings.sync){box.textContent='Kapalı. Kelimelerin yalnızca bu tarayıcıda kalır.';return;}
+  const s=syncStatus,base='Aynı Google hesabıyla oturum açtığın ve Chrome senkronunda Uzantılar açık olan Chrome\'larda kelimeler, durumları, tarihleri ve Türkçe karşılıkları eşitlenir. Notlar ve örnek cümleler bu cihazda kalır.';
+  if(!s){box.textContent=base;return;}
+  const time=new Date(s.at).toLocaleTimeString('tr',{hour:'2-digit',minute:'2-digit'}),full=s.limit?Math.round(s.bytes/s.limit*100):0;
+  if(s.error==='quota')box.textContent=`Senkron alanı doldu (Chrome yaklaşık 100 KB'a izin veriyor). Son değişiklikler eşitlenmedi; kullanmadığın kelimeleri kaldırabilir veya JSON yedeğiyle taşıyabilirsin.`;
+  else if(s.error)box.textContent=`Son eşitleme denemesi başarısız (${time}): ${s.error}`;
+  else box.textContent=`${base} Son eşitleme ${time} · ${s.count.toLocaleString('tr')} kayıt · senkron alanı doluluğu %${full}${s.translations?'':' · yer kalmadığı için Türkçe karşılıklar eşitlenmiyor'}.`;
+}
 for(const k of ['unknown','learning','learned'])$(`color-${k}`).onchange=()=>safe(()=>send({type:'settings',patch:{colors:{[k]:$(`color-${k}`).value}}}));
 $('reset-colors').onclick=()=>safe(()=>send({type:'settings',patch:{colors:Lingo.defaults.colors}}));
 function download(name,body,type){const url=URL.createObjectURL(new Blob([body],{type}));const a=el('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
@@ -171,6 +183,6 @@ async function fillTranslations(list,gesture=false){
   }catch{}finally{missing.forEach(row=>translating.delete(row.word));}
 }
 $('translate-words').onclick=()=>safe(()=>fillTranslations(filtered().slice(0,limit),true));$('site-mode').onchange=()=>safe(async()=>{if(!activeHost)return;await send({type:'settings',patch:{siteModes:{[activeHost]:$('site-mode').value}}});toast('Bu sitenin ayarı kaydedildi.');});
-chrome.storage.onChanged.addListener((changes,area)=>{if(area!=='local')return;for(const k of ['words','events','activity'])if(changes[k])data[k]=changes[k].newValue||(k==='events'?[]:{});if(changes.settings){data.settings=Lingo.settings(changes.settings.newValue);renderSettings();}if(changes.activity||changes.events)home();if(changes.words){setTimeout(refreshCounts,800);for(const word of selected)if(!data.words[word])selected.delete(word);home();renderLibrary();renderTokens();}if(changes.pending){setSource(changes.pending.newValue?.text||'',changes.pending.newValue?.url||'');view('add');}});
+chrome.storage.onChanged.addListener((changes,area)=>{if(area!=='local')return;if(changes.syncStatus){syncStatus=changes.syncStatus.newValue||null;renderSync();}for(const k of ['words','events','activity'])if(changes[k])data[k]=changes[k].newValue||(k==='events'?[]:{});if(changes.settings){data.settings=Lingo.settings(changes.settings.newValue);renderSettings();}if(changes.activity||changes.events)home();if(changes.words){setTimeout(refreshCounts,800);for(const word of selected)if(!data.words[word])selected.delete(word);home();renderLibrary();renderTokens();}if(changes.pending){setSource(changes.pending.newValue?.text||'',changes.pending.newValue?.url||'');view('add');}});
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change',theme);
-(async()=>{const saved=await chrome.storage.local.get(['words','settings','events','activity','pending']);data={words:saved.words||{},settings:Lingo.settings(saved.settings),events:saved.events||[],activity:saved.activity||{}};renderSettings();home();renderLibrary();if(saved.pending?.text&&Date.now()-saved.pending.nonce<120000){setSource(saved.pending.text,saved.pending.url);view('add');}else{renderTokens();refreshPage();}})().catch(e=>toast(e.message));
+(async()=>{const saved=await chrome.storage.local.get(['words','settings','events','activity','pending','syncStatus']);syncStatus=saved.syncStatus||null;data={words:saved.words||{},settings:Lingo.settings(saved.settings),events:saved.events||[],activity:saved.activity||{}};renderSettings();home();renderLibrary();if(saved.pending?.text&&Date.now()-saved.pending.nonce<120000){setSource(saved.pending.text,saved.pending.url);view('add');}else{renderTokens();refreshPage();}})().catch(e=>toast(e.message));

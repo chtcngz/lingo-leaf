@@ -1,4 +1,4 @@
-# LingoLeaf 0.8.0
+# LingoLeaf 0.9.0
 
 İngilizce okurken kelime ve ifadelerini yönet. Türkçe arayüz, yerel kayıt, renklendirme ve seçim kartında Türkçe çeviri.
 
@@ -23,6 +23,16 @@
 Masaüstü Chrome 120 veya daha yeni sürüm gerekir.
 
 Seçim kartındaki yerel çeviri için masaüstü Chrome 138 veya daha yeni sürüm gerekir. İlk çeviride Chrome İngilizce–Türkçe dil paketini indirebilir; kart indirme durumunu gösterir. Çeviri tarayıcıda yapılır, seçilen metin harici bir çeviri servisine gönderilmez.
+
+## Chrome'lar arası senkron
+
+Ayarlar → **Chrome senkronu** açıkken (varsayılan), aynı Google hesabıyla oturum açtığın Chrome'larda (ör. iş ve ev bilgisayarı) kelimelerin eşitlenir. Bunun için Chrome ayarlarında senkron açık olmalı ve senkronize edilenler arasında **Uzantılar** bulunmalı. Eklenti her bilgisayarda aynı kimlikle yüklü olmalı: Web Store'dan kurulan sürümde bu kendiliğinden olur; paketlenmemiş klasörden yüklendiğinde Chrome kimliği klasör yolundan türetir, yani iş ve ev bilgisayarında klasör yolu birebir aynı değilse eşitleme olmaz. Bunu `manifest.json`'a iki bilgisayarda da aynı `key` alanını ekleyerek sabitleyebilirsin; ama `key` eklemek mevcut kurulumun kimliğini değiştirir ve kayıtlar yeni kimlikte görünmez, bu yüzden önce **Yedek indir** ile JSON yedeği alıp sonra **Yedek yükle** ile geri yükle.
+
+- Eşitlenenler: kelime/ifade, durum, eklenme ve ilk öğrenme tarihi, Türkçe karşılık ve kaldırılan kelimeler.
+- Bu cihazda kalanlar: notlar, örnek cümleler, kaynak bağlantıları, ayarlar, okuma süresi ve geçmiş.
+- Aynı kelime iki yerde değiştiyse en son yapılan değişiklik geçerli olur.
+- Chrome senkron alanı yaklaşık 100 KB'tır: Türkçe karşılıklarla yaklaşık 2.000, karşılıksız yaklaşık 2.900 kelime sığar. Yer azalınca önce karşılıklar eşitlenmez; alan dolarsa ayarlarda uyarı çıkar ve JSON yedeğiyle taşıyabilirsin.
+- Edge'de de aynı şekilde Microsoft hesabıyla Edge'ler arasında çalışır; Chrome ile Edge arasında eşitleme yoktur.
 
 ## Okurken
 

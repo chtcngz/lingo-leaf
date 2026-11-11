@@ -1,4 +1,4 @@
-importScripts('phrases.js','expressions.js','core.js');
+importScripts('phrases.js','expressions.js','core.js','sync.js');
 const candidatePhrases=Lingo.bundledIndex();
 let queue=Promise.resolve();
 const enqueue=fn=>{const result=queue.then(fn);queue=result.catch(()=>{});return result;};
@@ -57,7 +57,7 @@ chrome.runtime.onMessage.addListener((msg,sender,respond)=>{
       for(const [key,expected] of Object.entries(tx.after)){
         const current=Object.hasOwn(words,key)?words[key]:null;
         if(bare(current)!==bare(expected))continue;
-        if(tx.before[key])words[key]={...tx.before[key],translation:tx.before[key].translation||current?.translation||''};else delete words[key];count++;
+        if(tx.before[key])words[key]={...tx.before[key],translation:tx.before[key].translation||current?.translation||'',updatedAt:new Date().toISOString()};else delete words[key];count++;
       }
       delete data.undo[msg.id];await chrome.storage.local.set({words,undo:data.undo});return {count,skipped:Object.keys(tx.before).length-count};
     });
@@ -72,6 +72,7 @@ chrome.runtime.onMessage.addListener((msg,sender,respond)=>{
       for(const [word,text] of Object.entries(msg.map).slice(0,500)){const value=cleanTranslation(text);if(!value||!Object.hasOwn(words,word)||words[word].translation)continue;words[word]={...words[word],translation:value};count++;}
       if(count)await chrome.storage.local.set({words});return {count};
     });
+    if(msg.type==='syncNow')return enqueue(syncNow);
     if(msg.type==='settings')return enqueue(async()=>{const data=await chrome.storage.local.get('settings'),old=data.settings||{};const value=Lingo.settings({...old,...msg.patch,colors:{...old.colors,...msg.patch?.colors},siteModes:{...old.siteModes,...msg.patch?.siteModes}});await chrome.storage.local.set({settings:value});return value;});
     if(msg.type==='pending'){
       const opening=sender.tab?chrome.sidePanel.open({tabId:sender.tab.id}):Promise.resolve();
@@ -93,3 +94,39 @@ chrome.runtime.onMessage.addListener((msg,sender,respond)=>{
   };
   run().then(result=>respond({ok:true,result})).catch(error=>respond({ok:false,error:error.message}));return true;
 });
+
+// Chrome sync (see sync.js): merge local words with the copy in chrome.storage.sync, newest change per word wins.
+let syncTimer;
+function scheduleSync(delay=4000){clearTimeout(syncTimer);syncTimer=setTimeout(()=>enqueue(syncNow).catch(console.error),delay);}
+async function syncNow(){
+  const data=await chrome.storage.local.get(['words','syncDeleted','settings']);
+  if(!Lingo.settings(data.settings).sync)return {off:true};
+  const status={at:new Date().toISOString(),error:''};
+  try{
+    const stored=await chrome.storage.sync.get(LingoSync.keys),words=data.words||{};
+    const merged=LingoSync.merge(words,LingoSync.prune(data.syncDeleted||{}),LingoSync.decode(stored));
+    const encoded=LingoSync.encode(merged.entries),changed=Object.fromEntries(Object.entries(encoded.items).filter(([key,value])=>(stored[key]||'')!==value));
+    Object.assign(status,{count:Object.keys(merged.words).length,bytes:encoded.bytes,limit:LingoSync.limits.TOTAL,translations:encoded.translations});
+    // When everything no longer fits, nothing is written, so the other devices keep a consistent copy.
+    if(!encoded.fits)status.error='quota';else if(Object.keys(changed).length)await chrome.storage.sync.set(changed);
+    const local={syncDeleted:merged.deleted,syncStatus:status};
+    if(JSON.stringify(merged.words)!==JSON.stringify(words))local.words=merged.words;
+    await chrome.storage.local.set(local);
+  }catch(error){status.error=error.message||'Senkron tamamlanamadı.';await chrome.storage.local.set({syncStatus:status});}
+  return status;
+}
+// Removals are remembered with their time so the other devices delete the word too instead of bringing it back.
+async function noteDeleted(before,after){
+  const data=await chrome.storage.local.get('syncDeleted'),deleted={...data.syncDeleted};let dirty=false;
+  for(const word of Object.keys(before))if(!Object.hasOwn(after,word)&&!Object.hasOwn(deleted,word)){deleted[word]=new Date().toISOString();dirty=true;}
+  for(const word of Object.keys(after))if(Object.hasOwn(deleted,word)){delete deleted[word];dirty=true;}
+  if(dirty)await chrome.storage.local.set({syncDeleted:deleted});
+}
+chrome.storage.onChanged.addListener((changes,area)=>{
+  if(area==='sync'&&LingoSync.keys.some(key=>changes[key]))scheduleSync(1500);
+  if(area!=='local')return;
+  if(changes.words)enqueue(()=>noteDeleted(changes.words.oldValue||{},changes.words.newValue||{})).then(()=>scheduleSync()).catch(console.error);
+  if(changes.settings&&changes.settings.newValue?.sync!==false&&changes.settings.oldValue?.sync===false)scheduleSync(0);
+});
+chrome.runtime.onStartup.addListener(()=>scheduleSync(2000));
+chrome.runtime.onInstalled.addListener(()=>scheduleSync(2000));

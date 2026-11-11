@@ -17,14 +17,14 @@ function background() {
     storage: { local: {
       get: async keys => Object.fromEntries([].concat(keys).filter(k => k in store).map(k => [k, structuredClone(store[k])])),
       set: async values => { Object.assign(store, structuredClone(values)); },
-    } },
-    runtime: { onMessage: { addListener: fn => { listener = fn; } }, onInstalled: event },
+    }, sync: { get: async () => ({}), set: async () => {} }, onChanged: event },
+    runtime: { onMessage: { addListener: fn => { listener = fn; } }, onInstalled: event, onStartup: event },
     contextMenus: { onClicked: event, removeAll: noop, create: noop },
     commands: { onCommand: event },
     sidePanel: { setPanelBehavior: async () => {}, open: async () => {} },
     i18n: { detectLanguage: async () => ({}) },
   };
-  const context = vm.createContext({ chrome, crypto, console, structuredClone, URL, Lingo, importScripts: noop, globalThis: {} });
+  const context = vm.createContext({ chrome, crypto, console, structuredClone, URL, Lingo, LingoSync: require('../sync.js'), setTimeout, clearTimeout, importScripts: noop, globalThis: {} });
   vm.runInContext(fs.readFileSync(path.join(__dirname, '../background.js'), 'utf8'), context);
   const send = msg => new Promise((resolve, reject) => listener(msg, {}, r => r.ok ? resolve(r.result) : reject(Error(r.error))));
   return { send, store };

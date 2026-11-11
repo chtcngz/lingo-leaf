@@ -1,3 +1,13 @@
+# 0.9.0 doğrulama notları
+
+11 Kasım 2026:
+
+- `node --test tests/*.test.js` (28 test). Yeni `tests/sync.test.js`: sıkı biçimin gidiş-dönüşü (silme ve `|;` içeren karşılık dahil), kelime başına en yeni değişikliğin kazanması, notun cihazda kalması, ikinci eşitlemenin hiçbir şey değiştirmemesi, silinip yeniden eklenen kelime, 100 KB toplam ve 8 KB parça sınırları (önce karşılıkların düşmesi, sığmayınca `fits:false`), iki gerçek `background.js` kopyasının ortak sync deposuyla aynı listeye ulaşması, senkron kapalıyken hiçbir şey yazılmaması.
+- Ayrı benzetimde iki cihaz gerçek `storage.onChanged` olaylarıyla çalıştırıldı: ekleme, silme, durum değişikliği ve silmenin geri alınması iki tarafta aynı sonuca ulaştı; 5 sync yazımından sonra döngü durdu (ek yazım yok).
+- Kelime başına yaklaşık 48 bayt (karşılıklı) / 32 bayt (karşılıksız).
+- Panel ayarlarında senkron anahtarı ve durum metni Playwright'ta kontrol edildi.
+- Gerçek iki Chrome profilinde Google hesabı senkronu denenmedi.
+
 # 0.8.0 doğrulama notları
 
 11 Kasım 2026:

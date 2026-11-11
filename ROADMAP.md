@@ -1,6 +1,6 @@
 # LingoLeaf — Yol haritası
 
-Güncelleme: 11 Kasım 2026 · Sürüm: 0.8.0
+Güncelleme: 11 Kasım 2026 · Sürüm: 0.9.0
 
 ## Kapsam
 
@@ -95,7 +95,15 @@ Güncelleme: 11 Kasım 2026 · Sürüm: 0.8.0
 - [x] Sonradan eklenen çeviri geri almayı engellemez; yalnızca çeviri değişince sayfa yeniden taranmaz.
 - [x] Paneldeki kelimenin üstüne gelince sayfadaki tüm geçişlerini vurgulama; tıklayınca sırayla kaydırma (#3).
 - [ ] Gerçek Chrome eklentisinde yan panelden Translator API ve dil paketi indirme düğmesinin doğrulanması.
-- [ ] Chrome hesapları arası kelime senkronu (`chrome.storage.sync`) (#1).
+
+## 0.9.0 Chrome senkronu
+
+- [x] `chrome.storage.sync` ile aynı Google hesabındaki Chrome'lar arasında kelime, durum, tarih ve Türkçe karşılık eşitleme (#1).
+- [x] Kelime başına en son değişiklik kazanır; silinen kelimeler 60 gün boyunca hatırlanır, diğer cihazda geri gelmez.
+- [x] 100 KB / 8 KB sınırlarına uyan 32 parçalı sıkı biçim; yer azalınca önce karşılıklar düşer, alan dolunca uyarı.
+- [x] Ayarlarda aç/kapat ve son eşitleme durumu.
+- [ ] İki gerçek Chrome profilinde (iş/ev) uçtan uca deneme.
+- [ ] Chrome ile Edge arası eşitleme (Google Drive gibi harici bir depo gerekir).
 
 ## Sonraki çeviri geliştirmeleri
 
