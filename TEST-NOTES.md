@@ -1,3 +1,12 @@
+# 0.8.0 doğrulama notları
+
+11 Kasım 2026:
+
+- `node --test tests/*.test.js` (22 test). Yeni `tests/translations.test.js` gerçek `background.js`'i bellekteki `chrome.storage` ile çalıştırır: çeviri yalnızca boş alanı doldurur ve geri alma adımı oluşturmaz; sonradan gelen çeviri geri almayı engellemez; ayrıntı formu çeviriyi düzenler, çevirisiz ayrıntı kaydı onu silmez; içe aktarma çeviriyi korur; ayrık öbek belirteçleri ait oldukları öbeği taşır.
+- Playwright Chromium'da taklit `chrome` ile içerik betiği: `election` 3 (biri `<b>` içinde), `give up` 2 geçiş (`gave it up` dahil) sayıldı; üstüne gelince tüm geçişler sarı, adımda geçerli geçiş turuncu oldu; ekran dışındaki geçişe kaydırdı; yalnızca çeviri değiştiğinde vurgular yeniden kurulmadı; blur vurguyu kaldırdı.
+- Aynı ortamda panel (420px): eksik çeviriler taklit Translator ile tek mesajda dolduruldu ve listede göründü; sayfada geçen kayıtlarda **Sayfada** düğmesi, tıklayınca `1 / 3`; ayrıntıda karşılık alanı.
+- Gerçek Chrome eklentisinde yan panelde Translator API ve dil paketi indirme düğmesi henüz denenmedi.
+
 # 0.7.0 doğrulama notları
 
 10 Kasım 2026 tarihinde kontrol edildi:

@@ -36,14 +36,20 @@ function wordRow(word,checkbox=true){
   const row=el('div','word');
   if(checkbox){const cb=el('input');cb.type='checkbox';cb.checked=selected.has(word.word);cb.setAttribute('aria-label',`${word.word} seç`);cb.onchange=()=>{if(cb.checked)selected.add(word.word);else selected.delete(word.word);renderBulk();};row.append(cb);}
   const body=el('div','word-body'),name=el('button','text-button',word.word);name.style.fontSize='15px';name.style.fontWeight='650';name.onclick=()=>openDetail(word.word);
-  const note=word.note||word.example||new Date(word.createdAt).toLocaleDateString('tr');body.append(name,el('small','',note));row.append(body);
+  const note=word.note||word.example||new Date(word.createdAt).toLocaleDateString('tr');body.append(name);if(word.translation)body.append(el('span','word-translation',word.translation));body.append(el('small','',note));row.append(body);
+  const count=pageCounts[word.word];
+  if(count){
+    row.classList.add('on-page');row.onmouseenter=()=>pageFocus(word.word,false);row.onmouseleave=()=>pageBlur(true);
+    const find=el('button','page-find',count>1?`Sayfada ${count}`:'Sayfada');find.title='Sayfadaki yerine git; tekrar tıklayınca sonrakine geçer';
+    find.onclick=()=>safe(async()=>{const r=await pageFocus(word.word,true);if(r?.count)find.textContent=`${r.index+1} / ${r.count}`;});row.append(find);
+  }
   const select=el('select');select.setAttribute('aria-label',`${word.word} durumu`);for(const s of Lingo.statuses){const option=el('option','',Lingo.labels[s]);option.value=s;select.append(option);}select.value=word.status;select.onchange=()=>safe(()=>change([word.word],select.value));row.append(select);return row;
 }
-function filtered(){const q=$('search').value.trim().toLowerCase();return rows().filter(w=>(filter==='all'||w.status===filter)&&w.word.includes(q)).sort($('sort').value==='alpha'?(a,b)=>a.word.localeCompare(b.word):(a,b)=>b.createdAt.localeCompare(a.createdAt));}
+function filtered(){const q=$('search').value.trim().toLowerCase();return rows().filter(w=>(filter==='all'||w.status===filter)&&(w.word.includes(q)||(w.translation||'').toLocaleLowerCase('tr').includes(q))).sort($('sort').value==='alpha'?(a,b)=>a.word.localeCompare(b.word):(a,b)=>b.createdAt.localeCompare(a.createdAt));}
 function renderLibrary(){
   const all=filtered(), shown=all.slice(0,limit);$('word-list').replaceChildren();
   if(!all.length)$('word-list').append(empty('Burada henüz kelime yok.','Sayfada kelime seç veya Kelime ekle alanından bir kelime ekle.'));
-  for(const word of shown)$('word-list').append(wordRow(word));$('more').hidden=all.length<=limit;$('library-count').textContent=`${all.length} kayıt · ${shown.length} tanesi gösteriliyor`;renderBulk();
+  for(const word of shown)$('word-list').append(wordRow(word));fillTranslations(shown);$('more').hidden=all.length<=limit;$('library-count').textContent=`${all.length} kayıt · ${shown.length} tanesi gösteriliyor`;renderBulk();
 }
 function renderBulk(){$('bulk').hidden=selected.size===0;$('selected-count').textContent=`${selected.size} seçili`;}
 $('search').oninput=()=>{limit=80;renderLibrary();};$('sort').onchange=renderLibrary;
@@ -111,25 +117,60 @@ for(const k of ['unknown','learning','learned'])$(`color-${k}`).onchange=()=>saf
 $('reset-colors').onclick=()=>safe(()=>send({type:'settings',patch:{colors:Lingo.defaults.colors}}));
 function download(name,body,type){const url=URL.createObjectURL(new Blob([body],{type}));const a=el('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
 $('export').onclick=()=>download(`lingoleaf-${Lingo.day()}.json`,JSON.stringify({app:'LingoLeaf',version:1,exportedAt:new Date().toISOString(),words:rows(),settings:data.settings},null,2),'application/json');
-$('export-csv').onclick=()=>{const quote=v=>'"'+String(v||'').replaceAll('"','""')+'"';const fields=['word','status','note','example','url','createdAt','learnedAt'];download(`lingoleaf-${Lingo.day()}.csv`,'\ufeff'+[fields.join(','),...rows().map(row=>fields.map(k=>quote(row[k])).join(','))].join('\r\n'),'text/csv;charset=utf-8');};
+$('export-csv').onclick=()=>{const quote=v=>'"'+String(v||'').replaceAll('"','""')+'"';const fields=['word','status','translation','note','example','url','createdAt','learnedAt'];download(`lingoleaf-${Lingo.day()}.csv`,'\ufeff'+[fields.join(','),...rows().map(row=>fields.map(k=>quote(row[k])).join(','))].join('\r\n'),'text/csv;charset=utf-8');};
 $('import').onclick=()=>$('import-file').click();$('import-file').onchange=()=>safe(async()=>{
   const input=$('import-file'),file=input.files[0];if(!file)return;input.value='';if(file.size>15*1024*1024)throw Error('Yedek 15 MB sınırını aşıyor.');
   const text=(await file.text()).replace(/^\uFEFF/,'');let imported;
   if(file.name.toLowerCase().endsWith('.json')){const backup=JSON.parse(text);if(backup.app!=='LingoLeaf'||backup.version!==1||!Array.isArray(backup.words))throw Error('Geçerli bir LingoLeaf yedeği seç.');imported=backup.words;}
   else if(file.name.toLowerCase().endsWith('.txt'))imported=text.split(/\r?\n/).filter(s=>s.trim()).map(word=>({word,status:$('import-status').value}));
-  else{const csv=Lingo.parseCSV(text);if(!csv.length)throw Error('Dosya boş.');const header=csv[0].map(c=>c.trim().toLowerCase()),hasHeader=header.includes('word')||header.includes('kelime');const aliases={kelime:'word',durum:'status',not:'note',örnek:'example',kaynak:'url',createdat:'createdAt',learnedat:'learnedAt'};imported=(hasHeader?csv.slice(1):csv).map(cells=>{const row={status:$('import-status').value};if(hasHeader)header.forEach((key,i)=>row[aliases[key]||key]=cells[i]);else {row.word=cells[0];if(cells[1])row.status=cells[1];}const statuses={'biliyorum':'known','öğreniyorum':'learning','öğrendim':'learned'};row.status=statuses[row.status?.trim().toLowerCase()]||row.status||$('import-status').value;return row;});}
+  else{const csv=Lingo.parseCSV(text);if(!csv.length)throw Error('Dosya boş.');const header=csv[0].map(c=>c.trim().toLowerCase()),hasHeader=header.includes('word')||header.includes('kelime');const aliases={kelime:'word',durum:'status',çeviri:'translation',türkçe:'translation',not:'note',örnek:'example',kaynak:'url',createdat:'createdAt',learnedat:'learnedAt'};imported=(hasHeader?csv.slice(1):csv).map(cells=>{const row={status:$('import-status').value};if(hasHeader)header.forEach((key,i)=>row[aliases[key]||key]=cells[i]);else {row.word=cells[0];if(cells[1])row.status=cells[1];}const statuses={'biliyorum':'known','öğreniyorum':'learning','öğrendim':'learned'};row.status=statuses[row.status?.trim().toLowerCase()]||row.status||$('import-status').value;return row;});}
   const r=await send({type:'import',rows:imported});undoResult(r,`${r.count} yeni kayıt eklendi; ${r.skipped||0} mevcut/geçersiz kayıt atlandı.`);
 });
-function openDetail(word){const row=data.words[word];if(!row)return;detailWord=word;$('detail-title').textContent=word;$('detail-example').value=row.example||'';$('detail-note').value=row.note||'';$('detail-date').textContent=`Eklendi: ${new Date(row.createdAt).toLocaleDateString('tr')}${row.learnedAt?' · İlk öğrenme: '+new Date(row.learnedAt).toLocaleDateString('tr'):''}`;const link=$('detail-source');link.hidden=true;link.removeAttribute('href');try{const url=new URL(row.url);if(['https:','http:'].includes(url.protocol)){link.href=url.href;link.hidden=false;}}catch{}$('word-dialog').showModal();}
+function openDetail(word){const row=data.words[word];if(!row)return;detailWord=word;$('detail-title').textContent=word;$('detail-example').value=row.example||'';$('detail-note').value=row.note||'';$('detail-translation').value=row.translation||'';$('detail-date').textContent=`Eklendi: ${new Date(row.createdAt).toLocaleDateString('tr')}${row.learnedAt?' · İlk öğrenme: '+new Date(row.learnedAt).toLocaleDateString('tr'):''}`;const link=$('detail-source');link.hidden=true;link.removeAttribute('href');try{const url=new URL(row.url);if(['https:','http:'].includes(url.protocol)){link.href=url.href;link.hidden=false;}}catch{}$('word-dialog').showModal();}
 $('close-detail').onclick=()=>$('word-dialog').close();
-$('detail-form').onsubmit=e=>{e.preventDefault();safe(async()=>{const r=await send({type:'detail',word:detailWord,note:$('detail-note').value,example:$('detail-example').value});$('word-dialog').close();undoResult(r,'Kelime notu kaydedildi.');});};
+$('detail-form').onsubmit=e=>{e.preventDefault();safe(async()=>{const r=await send({type:'detail',word:detailWord,note:$('detail-note').value,example:$('detail-example').value,translation:$('detail-translation').value});$('word-dialog').close();undoResult(r,'Kelime notu kaydedildi.');});};
 $('delete-word').onclick=()=>safe(async()=>{await change([detailWord],'remove');$('word-dialog').close();});
 $('forget-word').onclick=()=>safe(async()=>{await change([detailWord],'learning');$('word-dialog').close();});
-async function refreshPage(){
+async function refreshPage(){refreshCounts();
   try{const [tab]=await chrome.tabs.query({active:true,currentWindow:true});if(!tab?.id)throw Error();const stats=await chrome.tabs.sendMessage(tab.id,{type:'pageStats'});activeHost=stats.host;$('site-mode').disabled=false;$('site-mode').value=data.settings.siteModes[activeHost]||'auto';$('page-info').textContent=stats.total?`${stats.host} · ${stats.total} benzersiz kelimenin ${stats.known} tanesi bildiğin veya öğrendiğin olarak kayıtlı (%${Math.round(stats.known/stats.total*100)}).${stats.limited?' Büyük sayfa: kısmi tarama.':''}`:`${stats.host} · İngilizce içerik bulunamadı, tarama sürüyor veya renklendirme kapalı.`;}
   catch{$('page-info').textContent='İngilizce bir web sayfasına geçip Yenile’ye bas. Eklentiyi yeni yüklediysen sayfayı da yenile.';$('site-mode').disabled=true;activeHost='';}
 }
-$('refresh-page').onclick=refreshPage;$('site-mode').onchange=()=>safe(async()=>{if(!activeHost)return;await send({type:'settings',patch:{siteModes:{[activeHost]:$('site-mode').value}}});toast('Bu sitenin ayarı kaydedildi.');});
-chrome.storage.onChanged.addListener((changes,area)=>{if(area!=='local')return;for(const k of ['words','events','activity'])if(changes[k])data[k]=changes[k].newValue||(k==='events'?[]:{});if(changes.settings){data.settings=Lingo.settings(changes.settings.newValue);renderSettings();}if(changes.activity||changes.events)home();if(changes.words){for(const word of selected)if(!data.words[word])selected.delete(word);home();renderLibrary();renderTokens();}if(changes.pending){setSource(changes.pending.newValue?.text||'',changes.pending.newValue?.url||'');view('add');}});
+$('refresh-page').onclick=refreshPage;
+// Which listed words appear on the active tab; the library and recent list show a "Sayfada" button for them.
+let pageCounts={},countsRequest=0;
+async function activeTab(){const [tab]=await chrome.tabs.query({active:true,currentWindow:true});return tab?.id&&/^https?:/.test(tab.url||'')?tab:null;}
+async function refreshCounts(){
+  const request=++countsRequest;let counts={};
+  try{const tab=await activeTab();if(tab)counts=await chrome.tabs.sendMessage(tab.id,{type:'occurrences'})||{};}catch{}
+  if(request!==countsRequest||JSON.stringify(counts)===JSON.stringify(pageCounts))return;pageCounts=counts;renderLibrary();home();
+}
+async function pageFocus(word,step){const tab=await activeTab();if(!tab)return null;return chrome.tabs.sendMessage(tab.id,{type:'focus',word,step});}
+async function pageBlur(keep){try{const tab=await activeTab();if(tab)await chrome.tabs.sendMessage(tab.id,{type:'blur',keep});}catch{}}
+chrome.tabs.onActivated.addListener(()=>{pageCounts={};refreshCounts();});
+chrome.tabs.onUpdated.addListener((id,info,tab)=>{if(tab.active&&info.status==='complete')setTimeout(refreshCounts,1500);});
+// Saved words without a Turkish meaning are translated here with Chrome's on-device Translator, a few at a time.
+let panelTranslator=null;const translating=new Set();
+async function translator(gesture){
+  if(!globalThis.Translator)return null;
+  if(!panelTranslator){
+    const state=await Translator.availability({sourceLanguage:'en',targetLanguage:'tr'});
+    if(state==='unavailable')return null;
+    // Downloading the language pack needs a click, so the panel asks first.
+    if(state!=='available'&&!gesture){$('translate-hint').hidden=false;return null;}
+    panelTranslator=Translator.create({sourceLanguage:'en',targetLanguage:'tr'});panelTranslator.catch(()=>{panelTranslator=null;});
+  }
+  $('translate-hint').hidden=true;return panelTranslator;
+}
+async function fillTranslations(list,gesture=false){
+  const missing=list.filter(row=>!row.translation&&!translating.has(row.word)).slice(0,30);if(!missing.length)return;
+  missing.forEach(row=>translating.add(row.word));
+  try{
+    const t=await translator(gesture);if(!t)return;const ready=await t,map={};
+    for(const row of missing){try{map[row.word]=await ready.translate(row.word);}catch{}}
+    if(Object.keys(map).length)await send({type:'translations',map});
+  }catch{}finally{missing.forEach(row=>translating.delete(row.word));}
+}
+$('translate-words').onclick=()=>safe(()=>fillTranslations(filtered().slice(0,limit),true));$('site-mode').onchange=()=>safe(async()=>{if(!activeHost)return;await send({type:'settings',patch:{siteModes:{[activeHost]:$('site-mode').value}}});toast('Bu sitenin ayarı kaydedildi.');});
+chrome.storage.onChanged.addListener((changes,area)=>{if(area!=='local')return;for(const k of ['words','events','activity'])if(changes[k])data[k]=changes[k].newValue||(k==='events'?[]:{});if(changes.settings){data.settings=Lingo.settings(changes.settings.newValue);renderSettings();}if(changes.activity||changes.events)home();if(changes.words){setTimeout(refreshCounts,800);for(const word of selected)if(!data.words[word])selected.delete(word);home();renderLibrary();renderTokens();}if(changes.pending){setSource(changes.pending.newValue?.text||'',changes.pending.newValue?.url||'');view('add');}});
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change',theme);
 (async()=>{const saved=await chrome.storage.local.get(['words','settings','events','activity','pending']);data={words:saved.words||{},settings:Lingo.settings(saved.settings),events:saved.events||[],activity:saved.activity||{}};renderSettings();home();renderLibrary();if(saved.pending?.text&&Date.now()-saved.pending.nonce<120000){setSource(saved.pending.text,saved.pending.url);view('add');}else{renderTokens();refreshPage();}})().catch(e=>toast(e.message));
