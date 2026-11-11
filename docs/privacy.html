@@ -1,19 +1,66 @@
 <!DOCTYPE html>
-<html lang="tr">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>LingoLeaf — Gizlilik politikası / Privacy policy</title>
+<title>LingoLeaf Privacy Policy</title>
 <link rel="icon" href="icon.png">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <main>
-<header><img src="icon.png" alt=""><div><b>LingoLeaf</b><small>Gizlilik politikası · Privacy policy</small></div></header>
-<nav><a href="index.html">Ana sayfa / Home</a><a href="#en">English</a></nav>
-<p class="muted">Son güncelleme / Last updated: 11 Kasım 2026 / November 11, 2026</p>
+<header><img src="icon.png" alt=""><div><b>LingoLeaf</b><small>Privacy Policy · Gizlilik politikası</small></div></header>
+<nav><a href="index.html">LingoLeaf home</a><a href="#tr">Türkçe</a></nav>
+<p class="muted">Last updated: November 11, 2026 · Son güncelleme: 11 Kasım 2026</p>
 
-<h1>Gizlilik politikası</h1>
+<h1 id="en">LingoLeaf Privacy Policy</h1>
+<p>This policy explains what data the LingoLeaf browser extension (for Chrome and Microsoft Edge) handles, where it is stored, how Google user data is used, and how you can delete it.</p>
+<p>LingoLeaf is a browser extension. The developer operates no server, and the extension contains no advertising, analytics or tracking. Your data stays in your browser and, if you choose, in your own accounts.</p>
+
+<h2>Data processed</h2>
+<ul>
+<li><b>Your word list:</b> saved words and phrases, their status (learning, learned, known), Turkish translations, your notes, example sentences, the address of the page where you saved a word, and dates.</li>
+<li><b>Settings and progress:</b> colors, daily goal, per-site preferences, learning history and approximate reading time.</li>
+<li><b>Page text:</b> the text of open English pages is processed locally in your browser for coloring and language detection; it is never sent anywhere or stored.</li>
+</ul>
+
+<h2>Where data is stored</h2>
+<ul>
+<li><b>In your browser:</b> all data is kept in the browser's extension storage (<code>chrome.storage.local</code>).</li>
+<li><b>Browser sync (optional):</b> when enabled in settings, words, statuses, dates and Turkish translations are carried by the browser's own sync (<code>chrome.storage.sync</code>) to browsers signed into the same Google or Microsoft account. This transfer is performed by your browser.</li>
+<li><b>Google Drive (optional):</b> only if you press <b>Google ile bağlan</b> (Connect with Google), all of the data above is stored in a single <code>lingoleaf.json</code> file in the hidden application data folder of your own Google Drive and synchronized between the browsers you connect.</li>
+</ul>
+
+<h2>Google user data: what is accessed and why</h2>
+<p>LingoLeaf requests only the <code>https://www.googleapis.com/auth/drive.appdata</code> scope, which lets the extension create, read and update its own hidden application data folder in your Drive. LingoLeaf does not access or request your other Drive files, your name, your email address or any other Google data.</p>
+<ul>
+<li>The access token received from Google is kept only in the browser's session storage and is used only for requests to the Google Drive API.</li>
+<li>The Drive file is transferred only between your browsers and Google. It is not sent to the developer or any third party, is not sold, is not used for advertising, and is not read by humans.</li>
+<li>LingoLeaf's use and transfer to any other app of information received from Google APIs will adhere to the <a href="https://developers.google.com/terms/api-services-user-data-policy">Google API Services User Data Policy</a>, including the Limited Use requirements.</li>
+</ul>
+
+<h2>Data sharing</h2>
+<p>LingoLeaf does not sell, rent, share or disclose any user data, including Google user data, to the developer or to any third party. No data is used for advertising, credit decisions, training of AI models or any purpose other than providing the word-list features described above.</p>
+
+<h2>Data retention and security</h2>
+<p>Data in the browser is kept until you delete it or uninstall the extension. The Drive file is kept in your own Google Drive until you delete it (see below). All communication with Google uses HTTPS. The Google access token expires after about one hour and is never written to disk by LingoLeaf.</p>
+
+<h2>Translation</h2>
+<p>Turkish translations use the browser's built-in, on-device Translator API. LingoLeaf does not send selected text to any external translation service. Language detection also uses the browser's local capability.</p>
+
+<h2>Deleting your data and revoking access</h2>
+<ul>
+<li><b>Bağlantıyı kes</b> (Disconnect) in settings stops Drive sync.</li>
+<li>To delete the Drive file: Google Drive → Settings → <b>Manage apps</b> → LingoLeaf → <b>Delete hidden app data</b>.</li>
+<li>To revoke Google access: <a href="https://myaccount.google.com/permissions">myaccount.google.com/permissions</a> → LingoLeaf → <b>Remove access</b>.</li>
+<li>Uninstalling the extension deletes all LingoLeaf data from the browser. You can export your word list first with Settings → <b>Yedek indir</b> (Download backup).</li>
+</ul>
+
+<h2>Changes and contact</h2>
+<p>If this policy changes, the current version will be published on this page. Questions: <a href="https://github.com/chtcngz/lingo-leaf/issues">github.com/chtcngz/lingo-leaf/issues</a>.</p>
+
+<hr>
+<h1 id="tr">LingoLeaf gizlilik politikası</h1>
 <p>LingoLeaf bir tarayıcı eklentisidir. Geliştiricinin işlettiği bir sunucusu yoktur; reklam, analiz veya izleme aracı içermez. Verilerin senin tarayıcında ve, istersen, senin kendi hesaplarında kalır.</p>
 
 <h2>Hangi veriler işlenir</h2>
@@ -38,6 +85,12 @@
 <li>LingoLeaf'in Google API'lerinden aldığı bilgileri kullanması ve başka bir uygulamaya aktarması, Sınırlı Kullanım (Limited Use) koşulları dahil <a href="https://developers.google.com/terms/api-services-user-data-policy">Google API Hizmetleri Kullanıcı Verileri Politikası</a>'na uygundur.</li>
 </ul>
 
+<h2>Veri paylaşımı</h2>
+<p>LingoLeaf, Google kullanıcı verileri dahil hiçbir veriyi geliştiriciye veya üçüncü taraflara satmaz, kiralamaz, paylaşmaz. Veriler reklam, kredi kararları, yapay zekâ modeli eğitimi veya yukarıda anlatılan kelime listesi özellikleri dışında hiçbir amaçla kullanılmaz.</p>
+
+<h2>Saklama süresi ve güvenlik</h2>
+<p>Tarayıcıdaki veriler sen silene veya eklentiyi kaldırana kadar tutulur. Drive'daki dosya sen silene kadar kendi Google Drive'ında kalır. Google ile tüm iletişim HTTPS üzerinden yapılır. Google erişim izni yaklaşık bir saat sonra geçersiz olur ve LingoLeaf tarafından diske yazılmaz.</p>
+
 <h2>Çeviri</h2>
 <p>Türkçe çeviriler tarayıcının yerleşik, cihaz üzerinde çalışan çeviri özelliğiyle (Translator API) yapılır. LingoLeaf seçtiğin metni harici bir çeviri servisine göndermez. Dil algılama da tarayıcının yerel özelliğiyle yapılır.</p>
 
@@ -52,47 +105,7 @@
 <h2>Değişiklikler ve iletişim</h2>
 <p>Bu politika değişirse güncel hali bu sayfada yayımlanır. Sorular için: <a href="https://github.com/chtcngz/lingo-leaf/issues">github.com/chtcngz/lingo-leaf/issues</a>.</p>
 
-<hr>
-<h1 id="en">Privacy policy</h1>
-<p>LingoLeaf is a browser extension. The developer operates no server, and the extension contains no advertising, analytics or tracking. Your data stays in your browser and, if you choose, in your own accounts.</p>
-
-<h2>Data processed</h2>
-<ul>
-<li><b>Your word list:</b> saved words and phrases, their status (learning, learned, known), Turkish translations, your notes, example sentences, the address of the page where you saved a word, and dates.</li>
-<li><b>Settings and progress:</b> colors, daily goal, per-site preferences, learning history and approximate reading time.</li>
-<li><b>Page text:</b> the text of open English pages is processed locally in your browser for coloring and language detection; it is never sent anywhere or stored.</li>
-</ul>
-
-<h2>Where data is stored</h2>
-<ul>
-<li><b>In your browser:</b> all data is kept in the browser's extension storage (<code>chrome.storage.local</code>).</li>
-<li><b>Browser sync (optional):</b> when enabled in settings, words, statuses, dates and Turkish translations are carried by the browser's own sync (<code>chrome.storage.sync</code>) to browsers signed into the same Google or Microsoft account. This transfer is performed by your browser.</li>
-<li><b>Google Drive (optional):</b> only if you press <b>Google ile bağlan</b> (Connect with Google), all of the data above is stored in a single <code>lingoleaf.json</code> file in the hidden application data folder of your own Google Drive and synchronized between the browsers you connect.</li>
-</ul>
-
-<h2>Google user data</h2>
-<p>LingoLeaf requests only the <code>https://www.googleapis.com/auth/drive.appdata</code> scope, which lets the extension create, read and update its own hidden application data folder in your Drive. LingoLeaf does not access or request your other Drive files, your name, your email address or any other Google data.</p>
-<ul>
-<li>The access token received from Google is kept only in the browser's session storage and is used only for requests to the Google Drive API.</li>
-<li>The Drive file is transferred only between your browsers and Google. It is not sent to the developer or any third party, is not sold, is not used for advertising, and is not read by humans.</li>
-<li>LingoLeaf's use and transfer to any other app of information received from Google APIs will adhere to the <a href="https://developers.google.com/terms/api-services-user-data-policy">Google API Services User Data Policy</a>, including the Limited Use requirements.</li>
-</ul>
-
-<h2>Translation</h2>
-<p>Turkish translations use the browser's built-in, on-device Translator API. LingoLeaf does not send selected text to any external translation service. Language detection also uses the browser's local capability.</p>
-
-<h2>Deleting your data and revoking access</h2>
-<ul>
-<li><b>Bağlantıyı kes</b> (Disconnect) in settings stops Drive sync.</li>
-<li>To delete the Drive file: Google Drive → Settings → <b>Manage apps</b> → LingoLeaf → <b>Delete hidden app data</b>.</li>
-<li>To revoke Google access: <a href="https://myaccount.google.com/permissions">myaccount.google.com/permissions</a> → LingoLeaf → <b>Remove access</b>.</li>
-<li>Uninstalling the extension deletes all LingoLeaf data from the browser. You can export your word list first with Settings → <b>Yedek indir</b> (Download backup).</li>
-</ul>
-
-<h2>Changes and contact</h2>
-<p>If this policy changes, the current version will be published on this page. Questions: <a href="https://github.com/chtcngz/lingo-leaf/issues">github.com/chtcngz/lingo-leaf/issues</a>.</p>
-
-<footer>LingoLeaf · <a href="index.html">Ana sayfa / Home</a></footer>
+<footer>LingoLeaf · <a href="index.html">LingoLeaf home / Ana sayfa</a></footer>
 </main>
 </body>
 </html>
