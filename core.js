@@ -1,7 +1,7 @@
 (() => {
   const statuses = ['learning', 'learned', 'known'];
   const labels = {learning: 'Öğreniyorum', learned: 'Öğrendim', known: 'Biliyorum', unknown: 'Bilinmeyen'};
-  const defaults = {enabled: true, menu: true, names: true, intensity: 'soft', theme: 'system', goal: 5, siteModes: {}, colors: {unknown: '#b8abec', learning: '#efc67b', learned: '#82cbb1'}};
+  const defaults = {enabled: true, menu: true, names: true, sync: true, intensity: 'soft', theme: 'system', goal: 5, siteModes: {}, colors: {unknown: '#b8abec', learning: '#efc67b', learned: '#82cbb1'}};
   function normalize(text) { return String(text).normalize('NFKC').replace(/[’‘]/g, "'").trim().toLowerCase().replace(/^[^a-z]+|[^a-z]+$/g, '').replace(/\s+/g, ' '); }
   function tokens(text) { return [...String(text).matchAll(/(?<![\p{L}\p{N}_])[A-Za-z]+(?:['’‘][A-Za-z]+)*(?:-[A-Za-z]+)*(?![\p{L}\p{N}_])/gu)].filter(m=>!/[^a-zA-Z'’‘-]/.test(m[0])).map(m => ({word: normalize(m[0]), start: m.index, length: m[0].length})); }
   function unique(text) { return [...new Set(tokens(text).map(t => t.word))]; }
@@ -9,7 +9,7 @@
   function settings(value = {}) {
     const colors={...defaults.colors};for(const k of Object.keys(colors))if(/^#[a-f\d]{6}$/i.test(value.colors?.[k]))colors[k]=value.colors[k];
     const siteModes={};for(const [host,mode] of Object.entries(value.siteModes||{}))if(['auto','on','off'].includes(mode)&&host.length<255)siteModes[host]=mode;
-    return {enabled:typeof value.enabled==='boolean'?value.enabled:true,menu:typeof value.menu==='boolean'?value.menu:true,names:typeof value.names==='boolean'?value.names:true,intensity:['soft','normal','strong'].includes(value.intensity)?value.intensity:'soft',theme:['system','light','dark'].includes(value.theme)?value.theme:'system',goal:Math.max(1,Math.min(1000,Math.floor(Number(value.goal)||5))),colors,siteModes};
+    return {enabled:typeof value.enabled==='boolean'?value.enabled:true,menu:typeof value.menu==='boolean'?value.menu:true,names:typeof value.names==='boolean'?value.names:true,sync:typeof value.sync==='boolean'?value.sync:true,intensity:['soft','normal','strong'].includes(value.intensity)?value.intensity:'soft',theme:['system','light','dark'].includes(value.theme)?value.theme:'system',goal:Math.max(1,Math.min(1000,Math.floor(Number(value.goal)||5))),colors,siteModes};
   }
   function day(date = new Date()) { const d = new Date(date); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
   function englishHint(text) {
