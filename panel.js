@@ -42,12 +42,14 @@ async function change(words,status,example=''){
 function wordRow(word,checkbox=true){
   const row=el('div','word');
   if(checkbox){const cb=el('input');cb.type='checkbox';cb.checked=selected.has(word.word);cb.setAttribute('aria-label',`${word.word} seç`);cb.onchange=()=>{if(cb.checked)selected.add(word.word);else selected.delete(word.word);renderBulk();};row.append(cb);}
-  const body=el('div','word-body'),name=el('button','text-button',word.word);name.style.fontSize='15px';name.style.fontWeight='650';name.onclick=()=>openDetail(word.word);
-  const note=word.note||word.example||new Date(word.createdAt).toLocaleDateString('tr');body.append(name);if(word.translation)body.append(el('span','word-translation',word.translation));body.append(el('small','',note));row.append(body);
   const count=pageCounts[word.word];
+  const body=el('div','word-body'),nameWrap=el('span','word-name-wrap'),name=el('button','text-button',word.word);name.style.fontSize='15px';name.style.fontWeight='650';nameWrap.append(name);
+  const meaning=el('span','word-popover',word.translation||'Türkçe karşılık henüz yok');meaning.setAttribute('role','tooltip');nameWrap.append(meaning);
+  let find;name.onclick=()=>safe(async()=>{if(!count){openDetail(word.word);return;}const r=await pageFocus(word.word,true);if(r?.count&&find)find.textContent=`${r.index+1} / ${r.count}`;});
+  const note=word.note||word.example||new Date(word.createdAt).toLocaleDateString('tr');body.append(nameWrap);if(count){const edit=el('button','text-button word-edit','Düzenle');edit.type='button';edit.onclick=()=>openDetail(word.word);body.append(edit);}if(word.translation)body.append(el('span','word-translation',word.translation));body.append(el('small','',note));row.append(body);
   if(count){
     row.classList.add('on-page');row.onmouseenter=()=>pageFocus(word.word,false);row.onmouseleave=()=>pageBlur(true);
-    const find=el('button','page-find',count>1?`Sayfada ${count}`:'Sayfada');find.title='Sayfadaki yerine git; tekrar tıklayınca sonrakine geçer';
+    find=el('button','page-find',count>1?`Sayfada ${count}`:'Sayfada');find.title='Sayfadaki yerine git; tekrar tıklayınca sonrakine geçer';
     find.onclick=()=>safe(async()=>{const r=await pageFocus(word.word,true);if(r?.count)find.textContent=`${r.index+1} / ${r.count}`;});row.append(find);
   }
   const select=el('select');select.setAttribute('aria-label',`${word.word} durumu`);for(const s of Lingo.statuses){const option=el('option','',Lingo.labels[s]);option.value=s;select.append(option);}select.value=word.status;select.onchange=()=>safe(()=>change([word.word],select.value));row.append(select);return row;

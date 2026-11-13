@@ -8,6 +8,7 @@
   const names = new Set(); const sheet = new CSSStyleSheet();
   const focusSheet = new CSSStyleSheet();
   document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet, focusSheet];
+  const focusOverlay=document.createElement('div');focusOverlay.dataset.lingoleaf='true';focusOverlay.style.cssText='all:initial;display:block;position:fixed;inset:0;z-index:2147483645;pointer-events:none;';document.documentElement.append(focusOverlay);
   const excluded = 'script,style,noscript,textarea,input,select,option,code,pre,svg,math,[contenteditable]:not([contenteditable="false"]),[translate="no"],[data-lingoleaf],button';
   function textBlock(el){const natural=el.closest(blockSelector)||document.body,tagged=el.closest('[lang]');return tagged&&tagged!==document.documentElement&&natural.contains(tagged)?tagged:natural;}
   const message = async value => {const r=await chrome.runtime.sendMessage(value);if(!r?.ok)throw Error(r?.error||'Sayfayı yenileyin.');return r.result;};
@@ -72,8 +73,22 @@
   }
   function range(piece){const r=new Range();r.setStart(piece.seg.node,piece.start);r.setEnd(piece.seg.node,piece.end);return r;}
   // Panel hover and click: keep the word's existing colour and blink an underline at the current occurrence.
-  const focusNames=new Set();let focusTimer;
-  function clearFocus(){clearInterval(focusTimer);for(const name of focusNames)CSS.highlights?.delete(name);focusNames.clear();CSS.highlights?.delete('lingoleaf-focus-current');focusSheet.replaceSync('');}
+  const focusNames=new Set();let focusTimer,activeFocusList=null,activeFocusWord='',activeFocusIndex=-1;
+  function clearFocus(){clearInterval(focusTimer);for(const name of focusNames)CSS.highlights?.delete(name);focusNames.clear();CSS.highlights?.delete('lingoleaf-focus-current');focusSheet.replaceSync('');activeFocusList=null;focusOverlay.replaceChildren();}
+  function drawFocusOverlay(){
+    if(!activeFocusList)return;focusOverlay.replaceChildren();const status=words[activeFocusWord]?.status||'unknown';
+    for(const [index,parts] of activeFocusList.entries())for(const part of parts){
+      const color=status==='known'?`rgb(${part.info.original.slice(0,3).join(',')})`:highlightStyle(status,part.info).color;
+      for(const rect of part.range.getClientRects()){
+        if(!rect.width||!rect.height||rect.bottom<0||rect.top>innerHeight)continue;
+        const mark=document.createElement('div');mark.style.cssText=`position:absolute;left:${rect.left}px;top:${rect.top}px;width:${rect.width}px;height:${rect.height}px;box-sizing:border-box;border-bottom:2px dashed ${color};border-radius:2px;`;
+        if(index===activeFocusIndex){mark.style.border=`2px solid ${color}`;mark.style.animation='lingoleaf-focus-pulse .7s ease-in-out 3';}
+        focusOverlay.append(mark);
+      }
+    }
+  }
+  addEventListener('scroll',()=>{if(activeFocusList)requestAnimationFrame(drawFocusOverlay);},{passive:true});
+  addEventListener('resize',()=>{if(activeFocusList)requestAnimationFrame(drawFocusOverlay);},{passive:true});
   function occurrenceRanges(word){
     const list=[];
     for(const hit of occurrences.get(word)||[]){
@@ -98,7 +113,8 @@
     const currentPart=list[Math.max(0,focus.index+1)%list.length][0];
     const currentColor=status==='known'?`rgb(${currentPart.info.original.slice(0,3).join(',')})`:highlightStyle(status,currentPart.info).color;
     rules.push(`::highlight(lingoleaf-focus-current){text-decoration-line:underline;text-decoration-style:solid;text-decoration-color:${currentColor};text-decoration-thickness:4px}`);
-    focusSheet.replaceSync(rules.join('\n'));
+    rules.push('@keyframes lingoleaf-focus-pulse{50%{opacity:.15}}');focusSheet.replaceSync(rules.join('\n'));
+    activeFocusList=list;activeFocusWord=word;activeFocusIndex=step?(focus.index+1)%list.length:-1;drawFocusOverlay();
     if(!step)return {count:list.length,index:focus.index};
     focus.index=(focus.index+1)%list.length;
     const current=new Highlight(...list[focus.index].map(part=>part.range));current.priority=2;CSS.highlights.set('lingoleaf-focus-current',current);
