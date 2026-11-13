@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "LingoLeaf — Okurken İngilizce",
-  "version": "0.10.3",
+  "version": "0.10.4",
   "description": "İngilizce okurken kelimelerini tanı, öğren ve gelişimini takip et.",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAuyepdZHDsL+6ym01H7kCLc9mSHIGkhLZfUouQGc6oCB4m7Lq6dtRFENhvCdiJDx3GtnXuPCJO9YhJaywZfPmx6i8Ilj24b5YClpCqMgeHX/ECEiBr6jKflUTR/vXf98jDc7yowgYQ0iPARGIhXUD2SEROhM22mLRKfIPXnRyHIBiWXfz10F51QF92KysCJCdWXjLkJIxgzHiKZuW2o51zVOs1QWJLRPD5xM7HeW6N1eI/LllMt92pixOT+SypCJE9iiRFN34mWSxDOi2KqcDW6+cPajsNBo1hmGDnIewNmlUV7b6f9+xmfzG3l98kHshT8/cziiYaYp2xFMAlA2PmQIDAQAB",
   "minimum_chrome_version": "120",

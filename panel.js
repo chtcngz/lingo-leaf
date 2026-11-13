@@ -6,7 +6,7 @@ async function send(msg){const response=await chrome.runtime.sendMessage(msg);if
 function toast(text,undo){clearTimeout(toastTimer);const box=$('toast');box.replaceChildren(document.createTextNode(text));if(undo){const b=el('button','','Geri al');b.style.marginLeft='12px';b.onclick=()=>safe(undo);box.append(b);}box.hidden=false;toastTimer=setTimeout(()=>box.hidden=true,undo?12000:6000);}
 async function safe(fn){try{await fn();}catch(e){toast(e.message||'İşlem tamamlanamadı.');}}
 function theme(){const setting=data.settings.theme;document.documentElement.dataset.theme=setting==='system'?(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'):setting;}
-function view(name){currentView=name;document.querySelectorAll('.view').forEach(n=>n.hidden=n.id!==name);document.querySelectorAll('nav button').forEach(b=>{b.classList.toggle('active',b.dataset.view===name);b.setAttribute('aria-current',b.dataset.view===name?'page':'false');});if(name==='home')refreshPage();if(name==='library')renderLibrary();}
+function view(name){if(name!=='add')hideTokenPopover();currentView=name;document.querySelectorAll('.view').forEach(n=>n.hidden=n.id!==name);document.querySelectorAll('nav button').forEach(b=>{b.classList.toggle('active',b.dataset.view===name);b.setAttribute('aria-current',b.dataset.view===name?'page':'false');});if(name==='home')refreshPage();if(name==='library')renderLibrary();}
 document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>view(b.dataset.view));document.querySelectorAll('[data-goto]').forEach(b=>b.onclick=()=>view(b.dataset.goto));
 $('expand').onclick=()=>chrome.tabs.create({url:chrome.runtime.getURL('panel.html')});
 $('quick-toggle').onclick=()=>safe(async()=>{
@@ -42,16 +42,8 @@ async function change(words,status,example=''){
 function wordRow(word,checkbox=true){
   const row=el('div','word');
   if(checkbox){const cb=el('input');cb.type='checkbox';cb.checked=selected.has(word.word);cb.setAttribute('aria-label',`${word.word} seç`);cb.onchange=()=>{if(cb.checked)selected.add(word.word);else selected.delete(word.word);renderBulk();};row.append(cb);}
-  const count=pageCounts[word.word];
-  const body=el('div','word-body'),nameWrap=el('span','word-name-wrap'),name=el('button','text-button',word.word);name.style.fontSize='15px';name.style.fontWeight='650';nameWrap.append(name);
-  const meaning=el('span','word-popover',word.translation||'Türkçe karşılık henüz yok');meaning.setAttribute('role','tooltip');nameWrap.append(meaning);
-  let find;name.onclick=()=>safe(async()=>{if(!count){openDetail(word.word);return;}const r=await pageFocus(word.word,true);if(r?.count&&find)find.textContent=`${r.index+1} / ${r.count}`;});
-  const note=word.note||word.example||new Date(word.createdAt).toLocaleDateString('tr');body.append(nameWrap);if(count){const edit=el('button','text-button word-edit','Düzenle');edit.type='button';edit.onclick=()=>openDetail(word.word);body.append(edit);}if(word.translation)body.append(el('span','word-translation',word.translation));body.append(el('small','',note));row.append(body);
-  if(count){
-    row.classList.add('on-page');row.onmouseenter=()=>pageFocus(word.word,false);row.onmouseleave=()=>pageBlur(true);
-    find=el('button','page-find',count>1?`Sayfada ${count}`:'Sayfada');find.title='Sayfadaki yerine git; tekrar tıklayınca sonrakine geçer';
-    find.onclick=()=>safe(async()=>{const r=await pageFocus(word.word,true);if(r?.count)find.textContent=`${r.index+1} / ${r.count}`;});row.append(find);
-  }
+  const body=el('div','word-body'),name=el('button','text-button',word.word);name.style.fontSize='15px';name.style.fontWeight='650';name.onclick=()=>openDetail(word.word);
+  const note=word.note||word.example||new Date(word.createdAt).toLocaleDateString('tr');body.append(name);if(word.translation)body.append(el('span','word-translation',word.translation));body.append(el('small','',note));row.append(body);
   const select=el('select');select.setAttribute('aria-label',`${word.word} durumu`);for(const s of Lingo.statuses){const option=el('option','',Lingo.labels[s]);option.value=s;select.append(option);}select.value=word.status;select.onchange=()=>safe(()=>change([word.word],select.value));row.append(select);return row;
 }
 function filtered(){const q=$('search').value.trim().toLowerCase();return rows().filter(w=>(filter==='all'||w.status===filter)&&(w.word.includes(q)||(w.translation||'').toLocaleLowerCase('tr').includes(q))).sort($('sort').value==='alpha'?(a,b)=>a.word.localeCompare(b.word):(a,b)=>b.createdAt.localeCompare(a.createdAt));}
@@ -78,7 +70,31 @@ function sourceNames(text){
 }
 function termGroup(term,names){return data.words[term.word]?.status||(!term.phrase&&names.has(term.word)?'names':'new');}
 function currentTerms(){return Lingo.extractTerms($('source').value,candidatePhrases,data.words,splitPhrases).slice(0,600);}
+const tokenPopover=el('div','token-popover');tokenPopover.hidden=true;tokenPopover.setAttribute('role','tooltip');document.body.append(tokenPopover);
+addEventListener('scroll',()=>hideTokenPopover(),{passive:true});$('token-list').addEventListener('scroll',()=>hideTokenPopover(),{passive:true});
+const tokenMeanings=new Map();let tokenTranslator=null,tokenPopoverRequest=0;
+function positionTokenPopover(label){const r=label.getBoundingClientRect(),box=tokenPopover.getBoundingClientRect();tokenPopover.style.left=`${Math.max(8,Math.min(r.left,innerWidth-box.width-8))}px`;tokenPopover.style.top=`${r.top-box.height-8>=8?r.top-box.height-8:Math.min(innerHeight-box.height-8,r.bottom+8)}px`;}
+function hideTokenPopover(){tokenPopoverRequest++;tokenPopover.hidden=true;}
+async function tokenMeaning(word,gesture){
+  if(data.words[word]?.translation)return data.words[word].translation;
+  if(tokenMeanings.has(word))return tokenMeanings.get(word);
+  if(!globalThis.Translator)return 'Türkçe çeviri için Chrome 138 veya üzeri gerekir.';
+  if(!tokenTranslator){
+    const state=await Translator.availability({sourceLanguage:'en',targetLanguage:'tr'});
+    if(state==='unavailable')return 'Türkçe çeviri bu tarayıcıda kullanılamıyor.';
+    if(state!=='available'&&!gesture)return 'Çeviri paketini indirmek için kelimeye tıkla.';
+    tokenTranslator=Translator.create({sourceLanguage:'en',targetLanguage:'tr'});
+    tokenTranslator.catch(()=>{tokenTranslator=null;});
+  }
+  const result=await (await tokenTranslator).translate(word);tokenMeanings.set(word,result);return result;
+}
+async function showTokenPopover(label,word,gesture=false){
+  const request=++tokenPopoverRequest;tokenPopover.textContent=tokenMeanings.get(word)||data.words[word]?.translation||'Çevriliyor…';tokenPopover.hidden=false;positionTokenPopover(label);
+  try{const meaning=await tokenMeaning(word,gesture);if(request!==tokenPopoverRequest||!label.isConnected)return;tokenPopover.textContent=meaning;positionTokenPopover(label);}
+  catch{if(request===tokenPopoverRequest){tokenPopover.textContent='Çeviri tamamlanamadı.';positionTokenPopover(label);}}
+}
 function renderTokens(){
+  hideTokenPopover();
   const all=Lingo.extractTerms($('source').value,candidatePhrases,data.words,splitPhrases),terms=all.slice(0,600);$('token-list').replaceChildren();
   const names=sourceNames($('source').value);
   for(const word of picked)if(!terms.some(term=>term.word===word))picked.delete(word);
@@ -92,7 +108,10 @@ function renderTokens(){
     head.append(el('span',`dot ${dot}`),el('b','',title),el('small','',String(group.length)),toggle);box.append(head);
     const list=el('div','tokens');
     for(const {word,phrase,saved} of group){
-      const label=el('label','token'),input=el('input');input.type='checkbox';input.checked=picked.has(word);input.onchange=()=>{input.checked?picked.add(word):picked.delete(word);renderPicked();};
+      const label=el('label','token'),input=el('input');input.type='checkbox';input.checked=picked.has(word);
+      label.onmouseenter=()=>{pageFocus(word,false).catch(()=>{});showTokenPopover(label,word);};label.onmouseleave=()=>{pageBlur(true);hideTokenPopover();};
+      label.onfocusin=()=>{pageFocus(word,false).catch(()=>{});showTokenPopover(label,word);};label.onfocusout=()=>{pageBlur(true);hideTokenPopover();};
+      input.onchange=()=>{input.checked?picked.add(word):picked.delete(word);renderPicked();pageFocus(word,true).catch(()=>{});showTokenPopover(label,word,true);};
       label.append(input,document.createTextNode(word));if(phrase&&!saved)label.append(el('small','','öbek'));
       if(phrase&&!saved){const split=el('button','token-split','böl');split.type='button';split.title='Öbek değil; kelimeleri ayrı göster';split.onclick=e=>{e.preventDefault();splitPhrases.add(word);picked.delete(word);renderTokens();};label.append(split);}
       list.append(label);
@@ -175,23 +194,15 @@ $('close-detail').onclick=()=>$('word-dialog').close();
 $('detail-form').onsubmit=e=>{e.preventDefault();safe(async()=>{const r=await send({type:'detail',word:detailWord,note:$('detail-note').value,example:$('detail-example').value,translation:$('detail-translation').value});$('word-dialog').close();undoResult(r,'Kelime notu kaydedildi.');});};
 $('delete-word').onclick=()=>safe(async()=>{await change([detailWord],'remove');$('word-dialog').close();});
 $('forget-word').onclick=()=>safe(async()=>{await change([detailWord],'learning');$('word-dialog').close();});
-async function refreshPage(){refreshCounts();
+async function refreshPage(){
   try{const [tab]=await chrome.tabs.query({active:true,currentWindow:true});if(!tab?.id)throw Error();const stats=await chrome.tabs.sendMessage(tab.id,{type:'pageStats'});activeHost=stats.host;$('site-mode').disabled=false;$('site-mode').value=data.settings.siteModes[activeHost]||'auto';$('page-info').textContent=stats.total?`${stats.host} · ${stats.total} benzersiz kelimenin ${stats.known} tanesi bildiğin veya öğrendiğin olarak kayıtlı (%${Math.round(stats.known/stats.total*100)}).${stats.limited?' Büyük sayfa: kısmi tarama.':''}`:`${stats.host} · İngilizce içerik bulunamadı, tarama sürüyor veya renklendirme kapalı.`;}
   catch{$('page-info').textContent='İngilizce bir web sayfasına geçip Yenile’ye bas. Eklentiyi yeni yüklediysen sayfayı da yenile.';$('site-mode').disabled=true;activeHost='';}
 }
 $('refresh-page').onclick=refreshPage;
-// Which listed words appear on the active tab; the library and recent list show a "Sayfada" button for them.
-let pageCounts={},countsRequest=0;
-async function activeTab(){const [tab]=await chrome.tabs.query({active:true,currentWindow:true});return tab?.id&&/^https?:/.test(tab.url||'')?tab:null;}
-async function refreshCounts(){
-  const request=++countsRequest;let counts={};
-  try{const tab=await activeTab();if(tab)counts=await chrome.tabs.sendMessage(tab.id,{type:'occurrences'})||{};}catch{}
-  if(request!==countsRequest||JSON.stringify(counts)===JSON.stringify(pageCounts))return;pageCounts=counts;renderLibrary();home();
-}
+// The Add view focuses selected words and phrases in the active source tab.
+async function activeTab(){const [tab]=await chrome.tabs.query({active:true,currentWindow:true});return tab?.id?tab:null;}
 async function pageFocus(word,step){const tab=await activeTab();if(!tab)return null;return chrome.tabs.sendMessage(tab.id,{type:'focus',word,step});}
 async function pageBlur(keep){try{const tab=await activeTab();if(tab)await chrome.tabs.sendMessage(tab.id,{type:'blur',keep});}catch{}}
-chrome.tabs.onActivated.addListener(()=>{pageCounts={};refreshCounts();});
-chrome.tabs.onUpdated.addListener((id,info,tab)=>{if(tab.active&&info.status==='complete')setTimeout(refreshCounts,1500);});
 // Saved words without a Turkish meaning are translated here with Chrome's on-device Translator, a few at a time.
 let panelTranslator=null;const translating=new Set();
 async function translator(gesture){
@@ -215,6 +226,6 @@ async function fillTranslations(list,gesture=false){
   }catch{}finally{missing.forEach(row=>translating.delete(row.word));}
 }
 $('translate-words').onclick=()=>safe(()=>fillTranslations(filtered().slice(0,limit),true));$('site-mode').onchange=()=>safe(async()=>{if(!activeHost)return;await send({type:'settings',patch:{siteModes:{[activeHost]:$('site-mode').value}}});toast('Bu sitenin ayarı kaydedildi.');});
-chrome.storage.onChanged.addListener((changes,area)=>{if(area!=='local')return;if(changes.syncStatus){syncStatus=changes.syncStatus.newValue||null;renderSync();}if(changes.drive){driveInfo=changes.drive.newValue||{};renderDrive();}for(const k of ['words','events','activity'])if(changes[k])data[k]=changes[k].newValue||(k==='events'?[]:{});if(changes.settings){data.settings=Lingo.settings(changes.settings.newValue);renderSettings();}if(changes.activity||changes.events)home();if(changes.words){setTimeout(refreshCounts,800);for(const word of selected)if(!data.words[word])selected.delete(word);home();renderLibrary();renderTokens();}if(changes.pending){setSource(changes.pending.newValue?.text||'',changes.pending.newValue?.url||'');view('add');}});
+chrome.storage.onChanged.addListener((changes,area)=>{if(area!=='local')return;if(changes.syncStatus){syncStatus=changes.syncStatus.newValue||null;renderSync();}if(changes.drive){driveInfo=changes.drive.newValue||{};renderDrive();}for(const k of ['words','events','activity'])if(changes[k])data[k]=changes[k].newValue||(k==='events'?[]:{});if(changes.settings){data.settings=Lingo.settings(changes.settings.newValue);renderSettings();}if(changes.activity||changes.events)home();if(changes.words){for(const word of selected)if(!data.words[word])selected.delete(word);home();renderLibrary();renderTokens();}if(changes.pending){setSource(changes.pending.newValue?.text||'',changes.pending.newValue?.url||'');view('add');}});
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change',theme);
 (async()=>{const saved=await chrome.storage.local.get(['words','settings','events','activity','pending','syncStatus','drive']);syncStatus=saved.syncStatus||null;driveInfo=saved.drive||{};data={words:saved.words||{},settings:Lingo.settings(saved.settings),events:saved.events||[],activity:saved.activity||{}};renderSettings();home();renderLibrary();if(saved.pending?.text&&Date.now()-saved.pending.nonce<120000){setSource(saved.pending.text,saved.pending.url);view('add');}else{renderTokens();refreshPage();}})().catch(e=>toast(e.message));

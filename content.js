@@ -1,7 +1,7 @@
 (() => {
   if (globalThis.__lingoleaf) return;
   globalThis.__lingoleaf = true;
-  let words = {}, settings = Lingo.settings(), generation = 0, timer, pageEnglish = false, pageStats = null, occurrences = new Map(), focus = {word:'',index:-1}, hoverIndex = new WeakMap();
+  let words = {}, settings = Lingo.settings(), generation = 0, timer, pageEnglish = false, pageStats = null, occurrences = new Map(), focus = {word:'',index:-1};
   const blockSelector='p,li,blockquote,h1,h2,h3,h4,h5,h6,td,th,figcaption,div,article,section';
   const blockVerdicts=new WeakMap(),languageCache=new Map();let lastInteraction=Date.now();
   const candidatePhrases=Lingo.bundledIndex();
@@ -125,7 +125,7 @@
   }
   function schedule() { clearTimeout(timer); generation++; timer=setTimeout(scan,350); }
   async function scan() {
-    const id=++generation; clear(); hoverIndex=new WeakMap(); hideTip(); pageStats=null; const found=new Map();
+    const id=++generation; clear(); pageStats=null; const found=new Map();
     if (!settings.enabled || settings.siteModes[location.hostname]==='off' || !CSS.highlights || !globalThis.Highlight){clearFocus();return;}
     const walker=document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
     const groups=new Map(), blocks=new Map(),seen=new Set(), known=new Set(); let node, processed=0, limited=false;
@@ -179,13 +179,6 @@
       CSS.highlights.set(name,highlight); names.add(name); rules.push(`::highlight(${name}) { color: ${group.color};${group.background?` background-color: ${group.background};`:''} }`);
     }
     sheet.replaceSync(rules.join('\n'));occurrences=found;
-    hoverIndex=new WeakMap();
-    for(const [word,hits] of found){if(!Object.hasOwn(words,word))continue;
-      for(const hit of hits)for(const token of hit.tokens)for(const piece of pieces(hit.segments,token.start,token.length)){
-        const node=piece.seg.node;if(!node.isConnected)continue;
-        const entries=hoverIndex.get(node)||[];entries.push({word,start:piece.start,end:piece.end});hoverIndex.set(node,entries);
-      }
-    }
     if(focus.word&&focusNames.size)showFocus(focus.word,false);
     pageStats={total:seen.size,known:known.size,limited,english:seen.size>0,host:location.hostname};
   }
@@ -200,28 +193,6 @@
   const shadow=host.attachShadow({mode:'closed'});
   const style=document.createElement('style');style.textContent=`.card{box-sizing:border-box;width:min(360px,calc(100vw - 16px));max-height:calc(100vh - 16px);overflow-y:auto;background:#fff;border:1px solid #d5e4dc;border-radius:14px;box-shadow:0 10px 40px #0003;padding:10px;font:13px/1.45 system-ui;color:#1c3430} .title{font-size:12px;color:#63776c;padding:3px 4px 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis} .translation{border-top:1px solid #e4eee8;margin:2px 0 10px;padding:10px 4px 2px} .translation-label{font-size:10px;font-weight:700;letter-spacing:.5px;color:#63776c;margin-bottom:5px} .translation-text{font-size:14px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere} .context-source{color:#63776c;font-size:11px;margin-bottom:5px} .phrase-row{padding:6px 0;border-bottom:1px solid #edf3ef} .phrase-row:last-child{border:0} .phrase-form{font-weight:650} .phrase-meaning{font-size:12px;margin:4px 0;color:#496b58} .actions{display:flex;gap:5px;flex-wrap:wrap}button{font:12px system-ui;cursor:pointer;border:0;border-radius:8px;background:#edf4ef;color:#193d30;padding:8px}button:hover{background:#d4e8dc}button:disabled{opacity:.6;cursor:default} .note{padding:6px;font-size:12px}`;
   shadow.append(style);const card=document.createElement('div');card.className='card';shadow.append(card);document.documentElement.append(host);
-  const tipHost=document.createElement('div');tipHost.dataset.lingoleaf='true';tipHost.style.cssText='all:initial;position:fixed;z-index:2147483646;pointer-events:none;display:none;';
-  const tipShadow=tipHost.attachShadow({mode:'closed'}),tip=document.createElement('div');tip.style.cssText='box-sizing:border-box;max-width:280px;padding:8px 11px;border-radius:9px;background:#203e35;color:#fff;box-shadow:0 5px 18px #0004;font:13px/1.4 system-ui;overflow-wrap:anywhere;';tipShadow.append(tip);document.documentElement.append(tipHost);
-  let tipWord='';
-  function hideTip(){tipHost.style.display='none';tipWord='';}
-  document.addEventListener('pointermove',e=>{
-    if(!settings.enabled||settings.siteModes[location.hostname]==='off'||!document.caretRangeFromPoint){hideTip();return;}
-    const caret=document.caretRangeFromPoint(e.clientX,e.clientY),node=caret?.startContainer;
-    const entries=node?.nodeType===Node.TEXT_NODE?hoverIndex.get(node):null;
-    let match=null;
-    if(entries)for(const entry of entries){
-      if(caret.startOffset<entry.start||caret.startOffset>entry.end)continue;
-      const check=new Range();check.setStart(node,entry.start);check.setEnd(node,entry.end);
-      if([...check.getClientRects()].some(r=>e.clientX>=r.left&&e.clientX<=r.right&&e.clientY>=r.top&&e.clientY<=r.bottom)){
-        if(!match||entry.end-entry.start>match.end-match.start)match=entry;
-      }
-    }
-    if(!match){hideTip();return;}
-    const meaning=words[match.word]?.translation||'Türkçe karşılık henüz yok';
-    if(tipWord!==match.word||tip.dataset.meaning!==meaning){tip.replaceChildren();const title=document.createElement('strong');title.textContent=match.word;const text=document.createElement('div');text.textContent=meaning;tip.append(title,text);tip.dataset.meaning=meaning;tipWord=match.word;}
-    tipHost.style.display='block';tipHost.style.left=`${Math.max(8,Math.min(e.clientX+12,innerWidth-tip.getBoundingClientRect().width-8))}px`;tipHost.style.top=`${Math.max(8,Math.min(e.clientY+18,innerHeight-tip.getBoundingClientRect().height-8))}px`;
-  },{passive:true});
-  document.addEventListener('pointerleave',hideTip);addEventListener('scroll',hideTip,{passive:true});
   let selected='',translationRequest=0,translatorPromise=null,translatorState=null;
   const translationCache=new Map();
   // Saved words get their own Turkish meaning (not the sentence's) for the panel; only empty fields are filled.
@@ -338,7 +309,7 @@
     // Translation-only writes do not change colours, so the page and an open card are left alone.
     const recolor=changes.settings||(changes.words&&statusKey(changes.words.newValue)!==statusKey(changes.words.oldValue));
     if(changes.words)words=changes.words.newValue||{};if(changes.settings)settings=Lingo.settings(changes.settings.newValue);if(recolor){hide();schedule();}});
-  const observer=new MutationObserver(records=>{if(records.some(r=>r.type==='attributes'&&r.attributeName==='lang'))identify();else if(records.some(r=>r.type==='attributes'||r.type==='characterData'||[...r.addedNodes,...r.removedNodes].some(n=>n!==host&&n!==tipHost)))schedule();});
+  const observer=new MutationObserver(records=>{if(records.some(r=>r.type==='attributes'&&r.attributeName==='lang'))identify();else if(records.some(r=>r.type==='attributes'||r.type==='characterData'||[...r.addedNodes,...r.removedNodes].some(n=>n!==host)))schedule();});
   chrome.storage.local.get(['words','settings']).then(data=>{words=data.words||{};settings=Lingo.settings(data.settings);identify();observer.observe(document.body,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:['lang','class','style','hidden']});observer.observe(document.documentElement,{attributes:true,attributeFilter:['lang','class','style']});});
   matchMedia('(prefers-color-scheme: dark)').addEventListener('change',schedule);
   let resize;addEventListener('resize',()=>{clearTimeout(resize);resize=setTimeout(schedule,300);});

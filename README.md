@@ -1,4 +1,4 @@
-# LingoLeaf 0.10.3
+# LingoLeaf 0.10.4
 
 İngilizce okurken kelime ve ifadelerini yönet. Türkçe arayüz, yerel kayıt, renklendirme ve seçim kartında Türkçe çeviri.
 
@@ -26,7 +26,9 @@ Masaüstü Chrome 120 veya daha yeni sürüm gerekir.
 
 Yan panelin üstündeki **Açık / Kapalı** düğmesiyle sayfa renklendirmesini ve seçim kartını tek tıklamayla duraklatıp yeniden açabilirsin. Kelimelerin korunur; aynı ayar **Ayarlar → Renklendirme** altında da görünür.
 
-**Kelimelerim** bölümünde bir kelimenin üzerine gelince sayfadaki eşleşmeleri kendi durum rengiyle işaretlersin. Kelime adına veya **Sayfada** düğmesine tıklayınca eşleşmelere sırayla gider; bulunduğun kelime aynı renkte kısa süre yanıp söner. Kelime adının veya sayfadaki kayıtlı kelimenin üzerine gelince Türkçe karşılığı küçük bir kutuda görünür. Kelime ayrıntılarını açmak için **Düzenle** düğmesini kullan.
+Bir cümle seçip **Kelimeleri yönet** dediğinde **Kelime ekle** ekranındaki kelime ve öbeklerin üzerine gel: kaynak sayfadaki eşleşmeler kendi durum renkleriyle işaretlenir, Türkçe karşılık küçük bir kutuda görünür. Bir öğeyi seçince kaynak sayfadaki yeri kısa süre yanıp söner. Çeviri paketi hazır değilse indirmek için öğeye tıkla.
+
+Yan panel seçimi yaptığın sekmeye bağlıdır. Başka sekmeye geçince gizlenir; kaynak sekmeye dönünce kaldığı yerden görünür.
 
 Ana sayfa: https://chtcngz.github.io/lingo-leaf/ · Gizlilik politikası: https://chtcngz.github.io/lingo-leaf/privacy.html · Kullanım koşulları: https://chtcngz.github.io/lingo-leaf/terms.html
 
@@ -113,7 +115,7 @@ Yalnızca LingoLeaf'in istemcisi yerine kendi Google Cloud projeni kullanmak ist
 - Sağ tık veya **Alt+Shift+L** ile panele geç. Kısayol çakışırsa `chrome://extensions/shortcuts` adresinden değiştir.
 - Aynı kelime tekrar eklenmez. Listeye kayıtlı kelimelerin mevcut durumu görünür.
 - Kelimelerim listesinde her kaydın altında **Türkçe karşılığı** görünür. Karttan kaydettiğin kelimenin karşılığı kayıtla birlikte saklanır; eksik olanları panel Chrome'un yerel çevirisiyle tamamlar. Dil paketi henüz inmemişse panel bir kez **Paketi indir ve çevir** düğmesini gösterir. Karşılığı kelime ayrıntısından düzeltebilir veya kendin yazabilirsin; aramada Türkçe karşılık da aranır. Bu, kelimenin tek başına çevirisidir; bağlama göre anlamı farklı olabilir.
-- Kelimelerim listesinde açık sayfada geçen kayıtların yanında **Sayfada** düğmesi çıkar. Satırın üstüne gelince kelime sayfada sarı zeminle işaretlenir; düğmeye her tıklamada sıradaki geçtiği yere kaydırır ve turuncuyla gösterir (`2 / 5`).
+- Kelimeleri yönet ekranındaki kelime ve öbeklerin üzerine gelince kaynak sayfada eşleşmeleri görünür; seçince sıradaki eşleşmeye gider ve aynı renkte kısa süre yanıp söner. Türkçe karşılığı seçim öğesinin yanında açılır.
 - Kaydettiğin çok kelimeli ifadeler aynı paragrafta, kelimeler inline öğelerle ayrılmış olsa da renklendirilir. Uzun ifade önceliklidir.
 - Kişi, yer ve kurum adları (Netanyahu, Gaza Strip, NATO) renklendirilmez; panelde **Özel adlar** grubunda kapalı durur. Cümle ortasında büyük harfle başlayan kelimeler ve kısa büyük harfli kısaltmalar ad sayılır. Cümle başındaki veya Başlık Biçimindeki bir kelime, sayfada başka yerde ad olarak geçip hiç küçük harfle geçmiyorsa ad sayılır; kanıt yoksa renklendirilir. Kaydettiğin kelimeler her zaman renklenir. Ayarlar'daki **Özel adları atla** ile kapatılabilir.
 - Biliyorum kelimeleri ve ifadeleri renklendirilmez. Çekimler ayrı kayıttır.

@@ -64,7 +64,7 @@ function fakeDrive() {
 }
 
 function device(drive, sync) {
-  const store = {}, session = {}; let listener; const noop = () => {}; const event = { addListener: noop };
+  const store = {}, session = {}, panelOptions = []; let listener; const noop = () => {}; const event = { addListener: noop };
   const area = target => ({ get: async keys => Object.fromEntries([].concat(keys).filter(k => k in target).map(k => [k, structuredClone(target[k])])), set: async v => { Object.assign(target, structuredClone(v)); }, remove: async k => { delete target[k]; } });
   const chrome = {
     storage: { local: area(store), session: area(session), sync: area(sync), onChanged: event },
@@ -74,15 +74,20 @@ function device(drive, sync) {
     alarms: { create: noop, clear: async () => {}, onAlarm: event },
     runtime: { onMessage: { addListener: fn => { listener = fn; } }, onInstalled: event, onStartup: event },
     contextMenus: { onClicked: event, removeAll: noop, create: noop }, commands: { onCommand: event },
-    sidePanel: { setPanelBehavior: async () => {}, open: async () => {} }, i18n: { detectLanguage: async () => ({}) },
+    sidePanel: { setOptions: async options => { panelOptions.push(options); }, setPanelBehavior: async () => {}, open: async () => {} }, tabs: { query: async () => [{id:42}], onCreated: event }, i18n: { detectLanguage: async () => ({}) },
   };
   const context = vm.createContext({ chrome, crypto: globalThis.crypto, console, structuredClone, URL, URLSearchParams, Lingo, LingoSync: Sync, LingoDrive: Drive, fetch: drive.fetch, importScripts: noop, globalThis: {}, setTimeout, clearTimeout });
   vm.runInContext(fs.readFileSync(path.join(__dirname, '../background.js'), 'utf8'), context);
   const send = msg => new Promise((resolve, reject) => listener(msg, {}, r => r.ok ? resolve(r.result) : reject(Error(r.error))));
-  return { send, store, session, context };
+  return { send, store, session, context, panelOptions };
 }
 const wait = ms => new Promise(r => setTimeout(r, ms));
 const CLIENT = '1234-abc.apps.googleusercontent.com';
+
+test('side panel is scoped to tabs instead of the whole window', async () => {
+  const local = device(fakeDrive(), {});await wait(0);
+  assert.deepEqual(local.panelOptions.map(option => ({...option})), [{enabled:false},{tabId:42,path:'panel.html',enabled:true}]);
+});
 
 test('Chrome at home, Chrome at work and Edge share words, notes and settings through Drive', async () => {
   const drive = fakeDrive();

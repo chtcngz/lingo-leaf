@@ -2,18 +2,22 @@ importScripts('phrases.js','expressions.js','core.js','sync.js','drive.js');
 const candidatePhrases=Lingo.bundledIndex();
 let queue=Promise.resolve();
 const enqueue=fn=>{const result=queue.then(fn);queue=result.catch(()=>{});return result;};
-chrome.sidePanel.setPanelBehavior({openPanelOnActionClick:true}).catch(()=>{});
+// Keep the panel attached to the source tab; Chrome hides it on other tabs and restores it on return.
+const panelReady=chrome.sidePanel.setOptions({enabled:false}).catch(console.error);
+const enableTabPanel=async tabId=>{await panelReady;return chrome.sidePanel.setOptions({tabId,path:'panel.html',enabled:true}).catch(console.error);};
+chrome.tabs.query({}).then(tabs=>Promise.all(tabs.filter(tab=>tab.id).map(tab=>enableTabPanel(tab.id)))).then(()=>chrome.sidePanel.setPanelBehavior({openPanelOnActionClick:true})).catch(console.error);
+chrome.tabs.onCreated.addListener(tab=>{if(tab.id)enableTabPanel(tab.id);});
 chrome.runtime.onInstalled.addListener(()=>chrome.contextMenus.removeAll(()=>{
   for(const [id,title] of Object.entries({select:'LingoLeaf: Kelimeleri yönet',learning:'Öğrenme listeme ekle',known:'Biliyorum',learned:'Öğrendim'}))chrome.contextMenus.create({id,title,contexts:['selection'],documentUrlPatterns:['http://*/*','https://*/*']});
 }));
 async function pending(text,tab){await chrome.storage.local.set({pending:{text:String(text||'').slice(0,5000),url:tab?.url||'',nonce:Date.now()}});}
 chrome.contextMenus.onClicked.addListener((info,tab)=>{
-  if(info.menuItemId==='select'){chrome.sidePanel.open({windowId:tab.windowId}).catch(()=>{});pending(info.selectionText,{...tab,url:info.pageUrl||tab?.url}).catch(console.error);}
+  if(info.menuItemId==='select'){chrome.sidePanel.open({tabId:tab.id}).catch(console.error);pending(info.selectionText,{...tab,url:info.pageUrl||tab?.url}).catch(console.error);}
   else enqueue(async()=>change({words:Lingo.terms(info.selectionText,candidatePhrases,(await chrome.storage.local.get('words')).words||{}),status:info.menuItemId,url:info.pageUrl||tab?.url,example:info.selectionText})).catch(console.error);
 });
 chrome.commands.onCommand.addListener((command,tab)=>{
   if(command!=='open-panel'||!tab)return;
-  chrome.sidePanel.open({windowId:tab.windowId}).catch(()=>{});
+  chrome.sidePanel.open({tabId:tab.id}).catch(console.error);
   chrome.tabs.sendMessage(tab.id,{type:'selection'}).then(r=>pending(r?.text,{...tab,url:r?.url||tab.url})).catch(()=>pending('',tab));
 });
 const cleanDate=value=>typeof value==='string'&&Number.isFinite(Date.parse(value))?new Date(value).toISOString():null;

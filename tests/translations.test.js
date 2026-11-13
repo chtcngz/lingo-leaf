@@ -21,7 +21,7 @@ function background() {
     runtime: { onMessage: { addListener: fn => { listener = fn; } }, onInstalled: event, onStartup: event },
     contextMenus: { onClicked: event, removeAll: noop, create: noop },
     commands: { onCommand: event },
-    sidePanel: { setPanelBehavior: async () => {}, open: async () => {} },
+    sidePanel: { setOptions: async () => {}, setPanelBehavior: async () => {}, open: async () => {} }, tabs: { query: async () => [], onCreated: event },
     i18n: { detectLanguage: async () => ({}) },
   };
   const context = vm.createContext({ chrome, crypto, console, structuredClone, URL, Lingo, LingoSync: require('../sync.js'), setTimeout, clearTimeout, importScripts: noop, globalThis: {} });
