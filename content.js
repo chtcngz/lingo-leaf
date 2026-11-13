@@ -1,13 +1,12 @@
 (() => {
   if (globalThis.__lingoleaf) return;
   globalThis.__lingoleaf = true;
-  let words = {}, settings = Lingo.settings(), generation = 0, timer, pageEnglish = false, pageStats = null, occurrences = new Map(), focus = {word:'',index:-1};
+  let words = {}, settings = Lingo.settings(), generation = 0, timer, pageEnglish = false, pageStats = null, occurrences = new Map(), focus = {word:'',index:-1}, hoverIndex = new WeakMap();
   const blockSelector='p,li,blockquote,h1,h2,h3,h4,h5,h6,td,th,figcaption,div,article,section';
   const blockVerdicts=new WeakMap(),languageCache=new Map();let lastInteraction=Date.now();
   const candidatePhrases=Lingo.bundledIndex();
   const names = new Set(); const sheet = new CSSStyleSheet();
   const focusSheet = new CSSStyleSheet();
-  focusSheet.replaceSync('::highlight(lingoleaf-focus){background-color:#ffe17a;color:#1b1b1b}::highlight(lingoleaf-focus-current){background-color:#ff9f43;color:#111}');
   document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet, focusSheet];
   const excluded = 'script,style,noscript,textarea,input,select,option,code,pre,svg,math,[contenteditable]:not([contenteditable="false"]),[translate="no"],[data-lingoleaf],button';
   function textBlock(el){const natural=el.closest(blockSelector)||document.body,tagged=el.closest('[lang]');return tagged&&tagged!==document.documentElement&&natural.contains(tagged)?tagged:natural;}
@@ -72,12 +71,13 @@
     return out;
   }
   function range(piece){const r=new Range();r.setStart(piece.seg.node,piece.start);r.setEnd(piece.seg.node,piece.end);return r;}
-  // Panel hover and click: mark every occurrence of a saved word and step through them.
-  function clearFocus(){CSS.highlights?.delete('lingoleaf-focus');CSS.highlights?.delete('lingoleaf-focus-current');}
+  // Panel hover and click: keep the word's existing colour and blink an underline at the current occurrence.
+  const focusNames=new Set();let focusTimer;
+  function clearFocus(){clearInterval(focusTimer);for(const name of focusNames)CSS.highlights?.delete(name);focusNames.clear();CSS.highlights?.delete('lingoleaf-focus-current');focusSheet.replaceSync('');}
   function occurrenceRanges(word){
     const list=[];
     for(const hit of occurrences.get(word)||[]){
-      const parts=hit.tokens.flatMap(token=>pieces(hit.segments,token.start,token.length)).filter(p=>p.seg.node.isConnected).map(range);
+      const parts=hit.tokens.flatMap(token=>pieces(hit.segments,token.start,token.length)).filter(p=>p.seg.node.isConnected).map(piece=>({range:range(piece),info:piece.seg.info}));
       if(parts.length)list.push(parts);
     }
     return list;
@@ -86,18 +86,31 @@
     clearFocus();if(!CSS.highlights||!globalThis.Highlight)return {count:0};
     const list=occurrenceRanges(word);if(!list.length){focus={word:'',index:-1};return {count:0};}
     if(focus.word!==word)focus={word,index:-1};
-    const all=new Highlight(...list.flat());all.priority=1;CSS.highlights.set('lingoleaf-focus',all);
+    const status=words[word]?.status||'unknown',groups=new Map(),rules=[];
+    for(const occurrence of list)for(const part of occurrence){
+      const style=status==='known'?{color:`rgb(${part.info.original.slice(0,3).join(',')})`,background:''}:highlightStyle(status,part.info);
+      const key=`${style.color}|${style.background}`;if(!groups.has(key))groups.set(key,{style,ranges:[]});groups.get(key).ranges.push(part.range);
+    }
+    let i=0;for(const {style,ranges} of groups.values()){
+      const name=`lingoleaf-focus-${i++}`,highlight=new Highlight(...ranges);highlight.priority=1;CSS.highlights.set(name,highlight);focusNames.add(name);
+      rules.push(`::highlight(${name}){color:${style.color};${style.background?`background-color:${style.background};`:''}text-decoration-line:underline;text-decoration-color:${style.color};text-decoration-style:dashed;text-decoration-thickness:2px}`);
+    }
+    const currentPart=list[Math.max(0,focus.index+1)%list.length][0];
+    const currentColor=status==='known'?`rgb(${currentPart.info.original.slice(0,3).join(',')})`:highlightStyle(status,currentPart.info).color;
+    rules.push(`::highlight(lingoleaf-focus-current){text-decoration-line:underline;text-decoration-style:solid;text-decoration-color:${currentColor};text-decoration-thickness:4px}`);
+    focusSheet.replaceSync(rules.join('\n'));
     if(!step)return {count:list.length,index:focus.index};
     focus.index=(focus.index+1)%list.length;
-    const current=new Highlight(...list[focus.index]);current.priority=2;CSS.highlights.set('lingoleaf-focus-current',current);
-    const rect=list[focus.index][0].getBoundingClientRect();
+    const current=new Highlight(...list[focus.index].map(part=>part.range));current.priority=2;CSS.highlights.set('lingoleaf-focus-current',current);
+    let flashes=0;focusTimer=setInterval(()=>{if(++flashes>=6){CSS.highlights.set('lingoleaf-focus-current',current);clearInterval(focusTimer);return;}if(flashes%2)CSS.highlights.delete('lingoleaf-focus-current');else CSS.highlights.set('lingoleaf-focus-current',current);},350);
+    const rect=list[focus.index][0].range.getBoundingClientRect();
     if(rect.top<80||rect.bottom>innerHeight-80)scrollBy({top:rect.top-innerHeight/2,behavior:'smooth'});
     return {count:list.length,index:focus.index};
   }
   function schedule() { clearTimeout(timer); generation++; timer=setTimeout(scan,350); }
   async function scan() {
-    const id=++generation; clear(); pageStats=null; const found=new Map();
-    if (!settings.enabled || settings.siteModes[location.hostname]==='off' || !CSS.highlights || !globalThis.Highlight) return;
+    const id=++generation; clear(); hoverIndex=new WeakMap(); hideTip(); pageStats=null; const found=new Map();
+    if (!settings.enabled || settings.siteModes[location.hostname]==='off' || !CSS.highlights || !globalThis.Highlight){clearFocus();return;}
     const walker=document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
     const groups=new Map(), blocks=new Map(),seen=new Set(), known=new Set(); let node, processed=0, limited=false;
     const cached=new WeakMap();
@@ -149,7 +162,15 @@
       const name=`lingoleaf-${index++}`; const highlight=new Highlight();for(const r of group.ranges)highlight.add(r);
       CSS.highlights.set(name,highlight); names.add(name); rules.push(`::highlight(${name}) { color: ${group.color};${group.background?` background-color: ${group.background};`:''} }`);
     }
-    sheet.replaceSync(rules.join('\n'));occurrences=found;if(focus.word&&CSS.highlights.has('lingoleaf-focus'))showFocus(focus.word,false);
+    sheet.replaceSync(rules.join('\n'));occurrences=found;
+    hoverIndex=new WeakMap();
+    for(const [word,hits] of found){if(!Object.hasOwn(words,word))continue;
+      for(const hit of hits)for(const token of hit.tokens)for(const piece of pieces(hit.segments,token.start,token.length)){
+        const node=piece.seg.node;if(!node.isConnected)continue;
+        const entries=hoverIndex.get(node)||[];entries.push({word,start:piece.start,end:piece.end});hoverIndex.set(node,entries);
+      }
+    }
+    if(focus.word&&focusNames.size)showFocus(focus.word,false);
     pageStats={total:seen.size,known:known.size,limited,english:seen.size>0,host:location.hostname};
   }
   async function identify() {
@@ -163,6 +184,28 @@
   const shadow=host.attachShadow({mode:'closed'});
   const style=document.createElement('style');style.textContent=`.card{box-sizing:border-box;width:min(360px,calc(100vw - 16px));max-height:calc(100vh - 16px);overflow-y:auto;background:#fff;border:1px solid #d5e4dc;border-radius:14px;box-shadow:0 10px 40px #0003;padding:10px;font:13px/1.45 system-ui;color:#1c3430} .title{font-size:12px;color:#63776c;padding:3px 4px 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis} .translation{border-top:1px solid #e4eee8;margin:2px 0 10px;padding:10px 4px 2px} .translation-label{font-size:10px;font-weight:700;letter-spacing:.5px;color:#63776c;margin-bottom:5px} .translation-text{font-size:14px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere} .context-source{color:#63776c;font-size:11px;margin-bottom:5px} .phrase-row{padding:6px 0;border-bottom:1px solid #edf3ef} .phrase-row:last-child{border:0} .phrase-form{font-weight:650} .phrase-meaning{font-size:12px;margin:4px 0;color:#496b58} .actions{display:flex;gap:5px;flex-wrap:wrap}button{font:12px system-ui;cursor:pointer;border:0;border-radius:8px;background:#edf4ef;color:#193d30;padding:8px}button:hover{background:#d4e8dc}button:disabled{opacity:.6;cursor:default} .note{padding:6px;font-size:12px}`;
   shadow.append(style);const card=document.createElement('div');card.className='card';shadow.append(card);document.documentElement.append(host);
+  const tipHost=document.createElement('div');tipHost.dataset.lingoleaf='true';tipHost.style.cssText='all:initial;position:fixed;z-index:2147483646;pointer-events:none;display:none;';
+  const tipShadow=tipHost.attachShadow({mode:'closed'}),tip=document.createElement('div');tip.style.cssText='box-sizing:border-box;max-width:280px;padding:8px 11px;border-radius:9px;background:#203e35;color:#fff;box-shadow:0 5px 18px #0004;font:13px/1.4 system-ui;overflow-wrap:anywhere;';tipShadow.append(tip);document.documentElement.append(tipHost);
+  let tipWord='';
+  function hideTip(){tipHost.style.display='none';tipWord='';}
+  document.addEventListener('pointermove',e=>{
+    if(!settings.enabled||settings.siteModes[location.hostname]==='off'||!document.caretRangeFromPoint){hideTip();return;}
+    const caret=document.caretRangeFromPoint(e.clientX,e.clientY),node=caret?.startContainer;
+    const entries=node?.nodeType===Node.TEXT_NODE?hoverIndex.get(node):null;
+    let match=null;
+    if(entries)for(const entry of entries){
+      if(caret.startOffset<entry.start||caret.startOffset>entry.end)continue;
+      const check=new Range();check.setStart(node,entry.start);check.setEnd(node,entry.end);
+      if([...check.getClientRects()].some(r=>e.clientX>=r.left&&e.clientX<=r.right&&e.clientY>=r.top&&e.clientY<=r.bottom)){
+        if(!match||entry.end-entry.start>match.end-match.start)match=entry;
+      }
+    }
+    if(!match){hideTip();return;}
+    const meaning=words[match.word]?.translation||'Türkçe karşılık henüz yok';
+    if(tipWord!==match.word||tip.dataset.meaning!==meaning){tip.replaceChildren();const title=document.createElement('strong');title.textContent=match.word;const text=document.createElement('div');text.textContent=meaning;tip.append(title,text);tip.dataset.meaning=meaning;tipWord=match.word;}
+    tipHost.style.display='block';tipHost.style.left=`${Math.max(8,Math.min(e.clientX+12,innerWidth-tip.getBoundingClientRect().width-8))}px`;tipHost.style.top=`${Math.max(8,Math.min(e.clientY+18,innerHeight-tip.getBoundingClientRect().height-8))}px`;
+  },{passive:true});
+  document.addEventListener('pointerleave',hideTip);addEventListener('scroll',hideTip,{passive:true});
   let selected='',translationRequest=0,translatorPromise=null,translatorState=null;
   const translationCache=new Map();
   // Saved words get their own Turkish meaning (not the sentence's) for the panel; only empty fields are filled.
@@ -279,7 +322,7 @@
     // Translation-only writes do not change colours, so the page and an open card are left alone.
     const recolor=changes.settings||(changes.words&&statusKey(changes.words.newValue)!==statusKey(changes.words.oldValue));
     if(changes.words)words=changes.words.newValue||{};if(changes.settings)settings=Lingo.settings(changes.settings.newValue);if(recolor){hide();schedule();}});
-  const observer=new MutationObserver(records=>{if(records.some(r=>r.type==='attributes'&&r.attributeName==='lang'))identify();else if(records.some(r=>r.type==='attributes'||r.type==='characterData'||[...r.addedNodes,...r.removedNodes].some(n=>n!==host)))schedule();});
+  const observer=new MutationObserver(records=>{if(records.some(r=>r.type==='attributes'&&r.attributeName==='lang'))identify();else if(records.some(r=>r.type==='attributes'||r.type==='characterData'||[...r.addedNodes,...r.removedNodes].some(n=>n!==host&&n!==tipHost)))schedule();});
   chrome.storage.local.get(['words','settings']).then(data=>{words=data.words||{};settings=Lingo.settings(data.settings);identify();observer.observe(document.body,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:['lang','class','style','hidden']});observer.observe(document.documentElement,{attributes:true,attributeFilter:['lang','class','style']});});
   matchMedia('(prefers-color-scheme: dark)').addEventListener('change',schedule);
   let resize;addEventListener('resize',()=>{clearTimeout(resize);resize=setTimeout(schedule,300);});
