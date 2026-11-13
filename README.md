@@ -1,4 +1,4 @@
-# LingoLeaf 0.10.0
+# LingoLeaf 0.10.1
 
 İngilizce okurken kelime ve ifadelerini yönet. Türkçe arayüz, yerel kayıt, renklendirme ve seçim kartında Türkçe çeviri.
 
@@ -23,6 +23,8 @@
 5. Eklentiyi sabitle ve açık İngilizce sayfalarını yenile.
 
 Masaüstü Chrome 120 veya daha yeni sürüm gerekir.
+
+Yan panelin üstündeki **Açık / Kapalı** düğmesiyle sayfa renklendirmesini ve seçim kartını tek tıklamayla duraklatıp yeniden açabilirsin. Kelimelerin korunur; aynı ayar **Ayarlar → Renklendirme** altında da görünür.
 
 Ana sayfa: https://chtcngz.github.io/lingo-leaf/ · Gizlilik politikası: https://chtcngz.github.io/lingo-leaf/privacy.html · Kullanım koşulları: https://chtcngz.github.io/lingo-leaf/terms.html
 

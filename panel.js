@@ -9,6 +9,13 @@ function theme(){const setting=data.settings.theme;document.documentElement.data
 function view(name){currentView=name;document.querySelectorAll('.view').forEach(n=>n.hidden=n.id!==name);document.querySelectorAll('nav button').forEach(b=>{b.classList.toggle('active',b.dataset.view===name);b.setAttribute('aria-current',b.dataset.view===name?'page':'false');});if(name==='home')refreshPage();if(name==='library')renderLibrary();}
 document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>view(b.dataset.view));document.querySelectorAll('[data-goto]').forEach(b=>b.onclick=()=>view(b.dataset.goto));
 $('expand').onclick=()=>chrome.tabs.create({url:chrome.runtime.getURL('panel.html')});
+$('quick-toggle').onclick=()=>safe(async()=>{
+  const button=$('quick-toggle');button.disabled=true;
+  try{
+    data.settings=await send({type:'settings',patch:{enabled:!data.settings.enabled}});
+    renderSettings();toast(data.settings.enabled?'LingoLeaf açıldı.':'LingoLeaf duraklatıldı.');
+  }finally{button.disabled=false;}
+});
 function rows(){return Object.values(data.words);}
 function learningDates(){const learned=new Map();for(const row of rows())if(row.learnedAt)learned.set(row.word,row.learnedAt);for(const event of data.events)if(event.to==='learned'&&(!learned.has(event.word)||event.at<learned.get(event.word)))learned.set(event.word,event.at);return [...learned.values()];}
 function home(){
@@ -108,7 +115,7 @@ function renderPreview(){
     box.append(sample);
   }
 }
-function renderSettings(){renderSync();renderDrive();for(const k of ['enabled','menu','names','sync'])$(k).checked=data.settings[k];for(const k of ['goal','theme','intensity'])$(k).value=data.settings[k];for(const k of ['unknown','learning','learned'])$(`color-${k}`).value=data.settings.colors[k];theme();renderPreview();}
+function renderSettings(){const on=data.settings.enabled,quick=$('quick-toggle');quick.textContent=on?'Açık':'Kapalı';quick.setAttribute('aria-pressed',String(on));quick.setAttribute('aria-label',on?"LingoLeaf'i duraklat":"LingoLeaf'i aç");renderSync();renderDrive();for(const k of ['enabled','menu','names','sync'])$(k).checked=data.settings[k];for(const k of ['goal','theme','intensity'])$(k).value=data.settings[k];for(const k of ['unknown','learning','learned'])$(`color-${k}`).value=data.settings.colors[k];theme();renderPreview();}
 for(const k of ['enabled','menu','names','sync','goal','theme','intensity'])$(k).onchange=()=>safe(async()=>{
   let value=$(k).type==='checkbox'?$(k).checked:$(k).value;if(k==='goal'){value=Math.max(1,Math.min(1000,Math.floor(Number(value)||5)));$(k).value=value;}
   await send({type:'settings',patch:{[k]:value}});home();toast('Ayar kaydedildi.');
